@@ -1,6 +1,7 @@
 from dataclasses import dataclass
-from typing import List
 
+from pysmt.shortcuts import Symbol, And, GE, LT, Plus, Minus, Times, Equals, Real, Int, get_model
+from pysmt.typing import REAL
 
 @dataclass
 class State:
@@ -70,14 +71,33 @@ class FSM_Diff(metaclass=Singleton):
                 outcome.append(state_compare)
         return outcome
                     
+    def linear_equation_solver(self, state_pairs, k):
+        vars = [Symbol("k", REAL)]
+        domain = [Equals(vars[0], Real(k))]
+        equations = []
+        for state_pair in state_pairs:
+            variable = Symbol("(" + state_pair.states[0].name + "," + state_pair.states[1].name + ")", REAL)
+            vars.append(variable)
+            domain.append(GE(variable,Real(0.0)))
+            denominator = 2 * (len(state_pair.matching_trans) + len(state_pair.non_matching_trans[0]) + len(state_pair.non_matching_trans[1])) 
+            reached_states_vars = [Symbol("(" + t1.to_state.name + "," + t2.to_state.name  + ")", REAL) for t1, t2 in state_pair.matching_trans]
+            times = Real(0) if len(reached_states_vars) < 1 else Plus([i for i in reached_states_vars])
+            equation = Equals(Minus(Times(Real(denominator), variable), Times(vars[0], times)), Real(len(state_pair.matching_trans)))
+            equations.append(equation)
+        domain_formula = And( (i for i in domain))
+        equations_formula = And( (i for i in equations))
+        formula = And(domain_formula, equations_formula)
+        model = get_model(formula)
+        print(model)
 
+            
 
     def simularity_score(self,fsm_1, fsm_2, k):
-        out_match_trans = self.matching_transitions(fsm_1,fsm_2, True)
-        print(out_match_trans[0].non_matching_trans)
+        out_match_trans = self.matching_transitions(fsm_1,fsm_2,True)
+        self.linear_equation_solver(out_match_trans, k)
         
         in_match_trans = self.matching_transitions(fsm_1,fsm_2,False)
-        print(in_match_trans[0].matching_trans)
+        # self.linear_equation_solver(in_match_trans, k)
 
 
     def algorithm(self, fsm_1, fsm_2, k):
