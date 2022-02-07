@@ -2,6 +2,7 @@ from dataclasses import dataclass
 
 from pysmt.shortcuts import Symbol, And, GE, LT, Plus, Minus, Times, Equals, Real, Int, get_model
 from pysmt.typing import REAL
+from pysmt.oracles import get_logic
 
 @dataclass
 class State:
@@ -71,32 +72,38 @@ class FSM_Diff(metaclass=Singleton):
                 outcome.append(state_compare)
         return outcome
                     
-    def linear_equation_solver(self, state_pairs, k):
-        var_k = Symbol("k", REAL)
-        domain = [Equals(var_k, Real(k))]
+    def linear_equation_solver(self, state_pairs, k, out):
+        variables = []
+        domain = []
         equations = []
+        
         for state_pair in state_pairs:
             variable = Symbol("(" + state_pair.states[0].name + "," + state_pair.states[1].name + ")", REAL)
+            variables.append(variable)
             domain.append(GE(variable,Real(0.0)))
-            denominator = 2 * (len(state_pair.matching_trans) + len(state_pair.non_matching_trans[0]) + len(state_pair.non_matching_trans[1])) 
-            reached_states_vars = [Symbol("(" + t1.to_state.name + "," + t2.to_state.name  + ")", REAL) for t1, t2 in state_pair.matching_trans]
+            denominator = 2 * (len(state_pair.matching_trans) + len(state_pair.non_matching_trans[0]) + len(state_pair.non_matching_trans[1]))
+            reached_states_vars = [Symbol("(" + (t1.to_state.name if out else t1.from_state.name) + "," + (t2.to_state.name if out else t2.from_state.name)  + ")", REAL) for t1, t2 in state_pair.matching_trans]
             times = Real(0) if len(reached_states_vars) < 1 else Plus([i for i in reached_states_vars])
-            equation = Equals(Minus(Times(Real(denominator), variable), Times(var_k, times)), Real(len(state_pair.matching_trans)))
+            equation = Equals(Minus(Times(Real(denominator), variable), Times(Real(k), times)), Real(len(state_pair.matching_trans)))
             equations.append(equation)
-        domain_formula = And( (i for i in domain))
-        equations_formula = And( (i for i in equations))
-        formula = And(domain_formula, equations_formula)
-        model = get_model(formula)
-        print(model)
-
+        formula = And(And( (i for i in domain)), And( (i for i in equations)))
+        model = get_model(formula, solver_name="z3")
+        return_dict = {}
+        for var in variables:
+            return_dict[var] = model.get_value(var)
+        return return_dict
             
 
     def simularity_score(self,fsm_1, fsm_2, k):
         out_match_trans = self.matching_transitions(fsm_1,fsm_2,True)
-        self.linear_equation_solver(out_match_trans, k)
+        outcome_out = self.linear_equation_solver(out_match_trans, k, True)
         
         in_match_trans = self.matching_transitions(fsm_1,fsm_2,False)
-        # self.linear_equation_solver(in_match_trans, k)
+        outcome_in = self.linear_equation_solver(in_match_trans, k, False)
+        result_dict = {}
+        for key in outcome_out:
+            result_dict[key] = (outcome_out[key] + outcome_in[key]) / 2
+        return result_dict
 
 
     def algorithm(self, fsm_1, fsm_2, k):
