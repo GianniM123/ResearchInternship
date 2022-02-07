@@ -1,13 +1,10 @@
 from dataclasses import dataclass
 
-from pysmt.shortcuts import Symbol, And, GE, LT, Plus, Minus, Times, Equals, Real, Int, get_model
+from pysmt.shortcuts import Symbol, And, GE, Plus, Minus, Times, Equals, Real, get_model
 from pysmt.typing import REAL
-from pysmt.oracles import get_logic
-
 @dataclass
 class State:
     name: str
-
 
 @dataclass
 class Transition:
@@ -37,48 +34,53 @@ class Singleton(type):
 
 class FSM_Diff(metaclass=Singleton):
 
-    # Transitions match if output is equal for a input
+    def pair_matching_transition(self,fsm_1,fsm_2,s1,s2,out):
+        used_trans1 = []
+        used_trans2 = []
+        state_compare = ComparingStates((s1,s2),[],([],[]))
+        for t1 in fsm_1.transitions:
+            if (t1.from_state == s1 and out) or (t1.to_state == s1 and not out):
+                used_trans1.append(t1)
+        for t2 in fsm_2.transitions:
+            if (t2.from_state == s2 and out) or (t2.to_state == s2 and not out):
+                used_trans2.append(t2)
+
+        for t1 in used_trans1:
+            matched = False
+            for t2 in used_trans2:
+                if t1.input == t2.input and t1.output == t2.output:
+                    state_compare.matching_trans.append((t1,t2))
+                    matched = True
+            if not matched:
+                state_compare.non_matching_trans[0].append(t1)
+        
+        for t2 in used_trans2:
+            matched = False
+            for t1 in used_trans1:
+                if t1.input == t2.input and t1.output == t2.output:
+                    matched = True
+            if not matched:
+                state_compare.non_matching_trans[1].append(t2)
+        
+        return (state_compare)
+
     def matching_transitions(self,fsm_1,fsm_2,out):
         outcome = []
         for s1 in fsm_1.states:
             for s2 in fsm_2.states:
-                used_trans1 = []
-                used_trans2 = []
-                state_compare = ComparingStates((s1,s2),[],([],[]))
-                for t1 in fsm_1.transitions:
-                    if (t1.from_state == s1 and out) or (t1.to_state == s1 and not out):
-                        used_trans1.append(t1)
-                for t2 in fsm_2.transitions:
-                    if (t2.from_state == s2 and out) or (t2.to_state == s2 and not out):
-                        used_trans2.append(t2)
-
-                for t1 in used_trans1:
-                    matched = False
-                    for t2 in used_trans2:
-                        if t1.input == t2.input and t1.output == t2.output:
-                            state_compare.matching_trans.append((t1,t2))
-                            matched = True
-                    if not matched:
-                        state_compare.non_matching_trans[0].append(t1)
-                
-                for t2 in used_trans2:
-                    matched = False
-                    for t1 in used_trans1:
-                        if t1.input == t2.input and t1.output == t2.output:
-                            matched = True
-                    if not matched:
-                        state_compare.non_matching_trans[1].append(t2)
-            
-                outcome.append(state_compare)
+                outcome.append(self.pair_matching_transition(fsm_1,fsm_2,s1,s2,out))
         return outcome
                     
     def linear_equation_solver(self, state_pairs, k, out):
+        names = []
         variables = []
         domain = []
         equations = []
         
         for state_pair in state_pairs:
-            variable = Symbol("(" + state_pair.states[0].name + "," + state_pair.states[1].name + ")", REAL)
+            name = "(" + state_pair.states[0].name + "," + state_pair.states[1].name + ")"
+            names.append(name)
+            variable = Symbol(name, REAL)
             variables.append(variable)
             domain.append(GE(variable,Real(0.0)))
             denominator = 2 * (len(state_pair.matching_trans) + len(state_pair.non_matching_trans[0]) + len(state_pair.non_matching_trans[1]))
@@ -89,23 +91,102 @@ class FSM_Diff(metaclass=Singleton):
         formula = And(And( (i for i in domain)), And( (i for i in equations)))
         model = get_model(formula, solver_name="z3")
         return_dict = {}
-        for var in variables:
-            return_dict[var] = model.get_value(var)
+        for i in range(0,len(variables)):
+            return_dict[names[i]] = eval(str(model.get_value(variables[i])))
         return return_dict
             
-
-    def simularity_score(self,fsm_1, fsm_2, k):
+    def compute_scores(self,fsm_1, fsm_2, k):
         out_match_trans = self.matching_transitions(fsm_1,fsm_2,True)
         outcome_out = self.linear_equation_solver(out_match_trans, k, True)
         
         in_match_trans = self.matching_transitions(fsm_1,fsm_2,False)
         outcome_in = self.linear_equation_solver(in_match_trans, k, False)
+
         result_dict = {}
-        for key in outcome_out:
-            result_dict[key] = (outcome_out[key] + outcome_in[key]) / 2
+        for var in outcome_out:
+            result_dict[var] = (outcome_out[var] + outcome_in[var]) / 2
         return result_dict
 
+    def identify_landmarks(self, pairs_to_scores,t,r):
+        filtered_dict = {}
+        vars = []
+        for var in pairs_to_scores:
+            vars.append(var)
+            if (pairs_to_scores[var] >= t):
+                filtered_dict[var] = pairs_to_scores[var]
+        landmarks = []
+        for var in vars:
+            filtered_vars = list(filter(lambda v: str(v).split(",")[0] == str(var).split(",")[0] and not v == var, vars))
+            is_landmark = True
+            for f_var in filtered_vars:
+                if not (pairs_to_scores[var] >= (pairs_to_scores[f_var] * r) and var in filtered_dict):
+                    is_landmark = False
+            if is_landmark:
+                landmarks.append(var)
+        return landmarks        
 
-    def algorithm(self, fsm_1, fsm_2, k):
-        self.simularity_score(fsm_1,fsm_2,k)
+
+    def surrounding_pairs(self, fsm_1,fsm_2,pair):
+        list = pair.split(",")
+        s1 = list[0].split("(")[1]
+        s2 = list[1].split(")")[0]
+
+        n_pair = []
+        out_matching = self.pair_matching_transition(fsm_1,fsm_2,State(s1),State(s2),True)
+        for t_out1, t_out2 in out_matching.matching_trans:
+            n_pair.append( "("+ t_out1.to_state.name + "," + t_out2.to_state.name + ")")
+        in_matching = self.pair_matching_transition(fsm_1,fsm_2,State(s1),State(s2),False)
+        for t_in1, t_in2 in in_matching.matching_trans:
+            n_pair.append( "("+ t_in1.from_state.name + "," + t_in2.from_state.name + ")")
+        return n_pair
+
+    def pick_highest(self, n_pairs, pairs_to_scores):
+        highest =  ("", -0.0)
+        for pair in n_pairs:
+            if pairs_to_scores[pair] >= highest[1]:
+                highest = (pair, pairs_to_scores[pair])
+        return highest[0]
+
+    def remove_conflicts(self,n_pairs, pair):
+        list = pair.split(",")
+        new_n_pairs = []
+        for n_pair in n_pairs:
+            n_list = n_pair.split(",")
+            if list[0] != n_list[0] and list[1] != n_list[1]:
+                new_n_pairs.append(n_pair)
+        return new_n_pairs
+                
+
+    def algorithm(self, fsm_1, fsm_2, k, t, r):
+        pairs_to_scores = self.compute_scores(fsm_1,fsm_2,k)
+        
+        k_pairs = self.identify_landmarks(pairs_to_scores,t,r)
+        k_pairs = set(k_pairs)
+        key = "(" + fsm_1.initial_state.name + "," + fsm_2.initial_state.name + ")"
+        if not k_pairs and pairs_to_scores[key] >= 0:
+            k_pairs.add(key)
+        
+        all_pairs = []
+        for pair in k_pairs:
+            all_pairs = all_pairs + self.surrounding_pairs(fsm_1,fsm_2,pair)
+        n_pairs = list(filter(lambda x: not (x in k_pairs), list(dict.fromkeys(all_pairs))))
+        for k in k_pairs:
+            n_pairs = self.remove_conflicts(n_pairs,k)
+        
+        while n_pairs:
+            while n_pairs:
+                pair = self.pick_highest(n_pairs,pairs_to_scores)
+                k_pairs.add(pair)
+                n_pairs = self.remove_conflicts(n_pairs,pair)
+            
+            all_pairs = []
+            for pair in k_pairs:
+                all_pairs = all_pairs + self.surrounding_pairs(fsm_1,fsm_2,pair)
+            n_pairs = list(filter(lambda x: not (x in k_pairs), list(dict.fromkeys(all_pairs))))
+            for k in k_pairs:
+                n_pairs = self.remove_conflicts(n_pairs,k)
+    
+        return k_pairs
+        
+
 

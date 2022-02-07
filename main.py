@@ -35,6 +35,30 @@ pong_fsm = FSM([PongS0,PongS1,PongS2], PongS0, [
                         ]
                     )
  
+b0 = State("b0")
+b1 = State("b1")
+b2 = State("b2")
+b3 = State("b3")
+
+b_fsm = FSM([b0,b1,b2,b3],b0,[
+                        Transition(b2,b0,"b","0"),
+                        Transition(b3,b0,"b","0"),
+                        Transition(b0,b1,"a","0")
+])
+
+a0 = State("a0")
+a1 = State("a1")
+a2 = State("a2")
+a3 = State("a3")
+a4 = State("a4")
+
+a_fsm = FSM([a0,a1,a2,a3,a4],a0,[
+                        Transition(a3,a0,"b","0"),
+                        Transition(a0,a1,"a","0"),
+                        Transition(a0,a2,"a","0"),
+                        Transition(a0,a4,"b","0")
+])
 
 if __name__ == "__main__": 
-    FSM_Diff().algorithm(bowling_fsm,pong_fsm,0.5)
+    matching_pairs = FSM_Diff().algorithm(b_fsm,a_fsm,0.5,0.25,1)
+    print(matching_pairs)
