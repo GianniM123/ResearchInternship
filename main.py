@@ -1,4 +1,7 @@
-from fsm import FSM, Transition, State, FSM_Diff
+from fsm import FSM, Transition, State, FSM_Diff, SMT_SOLVERS
+import fsm
+import getopt, sys
+
 
 
 BowlingS0 = State("Start Game")
@@ -59,6 +62,30 @@ a_fsm = FSM([a0,a1,a2,a3,a4],a0,[
                         Transition(a0,a4,"b","0")
 ])
 
-if __name__ == "__main__": 
-    matching_pairs = FSM_Diff().algorithm(b_fsm,a_fsm,0.5,0.25,1)
+
+def main():
+    try:
+        arguments = getopt.getopt(sys.argv[1:],"hs:",["help","smt"])
+
+        for current_arg, current_val in arguments[0]:
+            if current_arg in ("-s", "--smt"):
+                if current_val in SMT_SOLVERS:
+                    fsm.current_solver = current_val
+                else:
+                    print("invalid smt-solver")
+                    return
+            elif current_arg in ("-h", "--help"):
+                print("Usage: main.py [-s <smt-solver>]")
+                print("<smt-solver> options:")
+                for solver in SMT_SOLVERS:
+                    print('\t' + solver)
+                return
+    except getopt.error as err:
+        print(str(err))
+
+    matching_pairs = FSM_Diff().algorithm(bowling_fsm,pong_fsm,0.5,0.2,1)
+
     print(matching_pairs)
+
+if __name__ == "__main__":
+    main()
