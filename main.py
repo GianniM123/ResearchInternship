@@ -83,7 +83,7 @@ def main():
     except getopt.error as err:
         print(str(err))
 
-    matching_pairs = FSM_Diff().algorithm(bowling_fsm,pong_fsm,0.5,0.2,1)
+    matching_pairs = FSM_Diff().algorithm(bowling_fsm,pong_fsm,0.5,0.8,1)
 
     print(matching_pairs)
 
