@@ -140,13 +140,13 @@ class FSM_Diff(metaclass=Singleton):
         s1 = pair[0]
         s2 = pair[1]
 
-        n_pair = []
+        n_pair = set()
         out_matching = self.pair_matching_transition(fsm_1,fsm_2,s1,s2,True)
         for t_out1, t_out2 in out_matching.matching_trans:
-            n_pair.append(  (t_out1.to_state , t_out2.to_state))
+            n_pair.add(  (t_out1.to_state , t_out2.to_state))
         in_matching = self.pair_matching_transition(fsm_1,fsm_2,s1,s2,False)
         for t_in1, t_in2 in in_matching.matching_trans:
-            n_pair.append( (t_in1.from_state, t_in2.from_state))
+            n_pair.add( (t_in1.from_state, t_in2.from_state))
         return n_pair
 
     def pick_highest(self, n_pairs, pairs_to_scores):
@@ -176,10 +176,9 @@ class FSM_Diff(metaclass=Singleton):
         if not k_pairs and pairs_to_scores[key] >= 0:
             k_pairs.add(key)
         # line 6
-        all_pairs = set()
+        n_pairs = set()
         for pair in k_pairs:
-            all_pairs = all_pairs.union(set(self.surrounding_pairs(fsm_1,fsm_2,pair)))
-        n_pairs = set(filter(lambda x: not (x in k_pairs), all_pairs))
+            n_pairs = n_pairs.union(self.surrounding_pairs(fsm_1,fsm_2,pair))
         for k in k_pairs:
             n_pairs = self.remove_conflicts(n_pairs,k)
         
@@ -193,10 +192,8 @@ class FSM_Diff(metaclass=Singleton):
                 # line 11
                 n_pairs = self.remove_conflicts(n_pairs,pair)
             # line 13
-            all_pairs = set()
             for pair in k_pairs:
-                all_pairs = all_pairs.union(set(self.surrounding_pairs(fsm_1,fsm_2,pair)))
-            n_pairs = set(filter(lambda x: not (x in k_pairs), all_pairs))
+                n_pairs = n_pairs.union(self.surrounding_pairs(fsm_1,fsm_2,pair))
             for k in k_pairs:
                 n_pairs = self.remove_conflicts(n_pairs,k)
     
