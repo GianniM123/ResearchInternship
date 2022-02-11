@@ -1,4 +1,6 @@
 from dataclasses import dataclass
+from typing import List, Tuple
+
 
 from pysmt.shortcuts import Symbol, And, GE, Plus, Minus, Times, Equals, Real, get_model
 from pysmt.typing import REAL
@@ -28,15 +30,15 @@ class Transition:
 
 @dataclass
 class FSM:
-    states: list[State]
+    states: List[State]
     initial_state: State
-    transitions: list[Transition]
+    transitions: List[Transition]
 
 @dataclass
 class ComparingStates:
-    states: tuple[State,State]
-    matching_trans: list[tuple[Transition,Transition]]
-    non_matching_trans: tuple[list[Transition],list[Transition]]
+    states: Tuple[State,State]
+    matching_trans: List[Tuple[Transition,Transition]]
+    non_matching_trans: Tuple[List[Transition],List[Transition]]
 
 class Singleton(type):
     _instances = {}
