@@ -1,13 +1,25 @@
 # Research Internship
 
+## Dependencies
+<ul>
+<li> <a href="https://pysmt.readthedocs.io/en/latest/"> pySMT </a> </li>
+<li> <a href="https://networkx.org/"> NetworkX </a> </li>
+</ul>
+
+## NetworkX
+Install the latest release:
+```
+$ pip install networkx[default]
+```
+
 ## pySMT
 Install the latest version of pySMT by:
 ```
-# pip install pysmt
+$ pip install pysmt
 ```
 After that the SMT-solvers can be installed by:
 ```
-# pysmt-install --all
+$ pysmt-install --all
 ```
 
 The solvers are saved in ~/.smt_solvers

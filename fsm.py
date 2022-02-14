@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 
 
 from pysmt.shortcuts import Symbol, And, GE, Plus, Minus, Times, Equals, Real, get_model
@@ -10,35 +10,10 @@ SMT_SOLVERS = ["msat","cvc4","z3","yices","btor","picosat","bdd"]
 current_solver = "z3"
 
 @dataclass
-class State ():
-    name: str
-
-    def __eq__(self, other):
-        if not isinstance(other, State):
-            return False
-        return self.name == other.name
-
-    def __hash__(self):
-        return hash(self.name)
-
-@dataclass
-class Transition:
-    from_state: State
-    to_state: State
-    input: str
-    output: str
-
-@dataclass
-class FSM:
-    states: List[State]
-    initial_state: State
-    transitions: List[Transition]
-
-@dataclass
 class ComparingStates:
-    states: Tuple[State,State]
-    matching_trans: List[Tuple[Transition,Transition]]
-    non_matching_trans: Tuple[List[Transition],List[Transition]]
+    states: Tuple[str,str]
+    matching_trans: List[Tuple[Dict,Dict]]
+    non_matching_trans: Tuple[List[Dict],List[Dict]]
 
 class Singleton(type):
     _instances = {}
@@ -53,16 +28,17 @@ class FSM_Diff(metaclass=Singleton):
         used_trans1 = []
         used_trans2 = []
         state_compare = ComparingStates((s1,s2),[],([],[]))
-        for t1 in fsm_1.transitions:
-            if (t1.from_state == s1 and out) or (t1.to_state == s1 and not out):
+        for t1 in fsm_1.edges.data():
+            if (t1[0] == s1 and out) or (t1[1] == s1 and not out):
                 used_trans1.append(t1)
-        for t2 in fsm_2.transitions:
-            if (t2.from_state == s2 and out) or (t2.to_state == s2 and not out):
+        for t2 in fsm_2.edges.data():
+            if (t2[0] == s2 and out) or (t2[1] == s2 and not out):
                 used_trans2.append(t2)
+
         for t1 in used_trans1:
             matched = False
             for t2 in used_trans2:
-                if t1.input == t2.input and t1.output == t2.output:
+                if t1[2]["input"] == t2[2]["input"] and t1[2]["output"] == t2[2]["output"]:
                     state_compare.matching_trans.append((t1,t2))
                     matched = True
             if not matched:
@@ -70,7 +46,7 @@ class FSM_Diff(metaclass=Singleton):
         for t2 in used_trans2:
             matched = False
             for t1 in used_trans1:
-                if t1.input == t2.input and t1.output == t2.output:
+                if t1[2]["input"] == t2[2]["input"] and t1[2]["output"] == t2[2]["output"]:
                     matched = True
             if not matched:
                 state_compare.non_matching_trans[1].append(t2)
@@ -79,8 +55,8 @@ class FSM_Diff(metaclass=Singleton):
 
     def matching_transitions(self,fsm_1,fsm_2,out):
         outcome = []
-        for s1 in fsm_1.states:
-            for s2 in fsm_2.states:
+        for s1 in fsm_1.nodes:
+            for s2 in fsm_2.nodes:
                 outcome.append(self.pair_matching_transition(fsm_1,fsm_2,s1,s2,out))
         return outcome
                     
@@ -92,11 +68,11 @@ class FSM_Diff(metaclass=Singleton):
         
         for state_pair in state_pairs:
             names.append(state_pair.states)
-            variable = Symbol("(" + state_pair.states[0].name + "," + state_pair.states[1].name + ")", REAL)
+            variable = Symbol("(" + state_pair.states[0] + "," + state_pair.states[1] + ")", REAL)
             variables.append(variable)
             domain.append(GE(variable,Real(0.0)))
             denominator = 2 * (len(state_pair.matching_trans) + len(state_pair.non_matching_trans[0]) + len(state_pair.non_matching_trans[1]))
-            reached_states_vars = [Symbol("(" + (t1.to_state.name if out else t1.from_state.name) + "," + (t2.to_state.name if out else t2.from_state.name)  + ")", REAL) for t1, t2 in state_pair.matching_trans]
+            reached_states_vars = [Symbol("(" + (t1[1] if out else t1[0]) + "," + (t2[1] if out else t2[0])  + ")", REAL) for t1, t2 in state_pair.matching_trans]
             times = Real(0) if len(reached_states_vars) < 1 else Plus([i for i in reached_states_vars])
             equation = Equals(Minus(Times(Real(denominator), variable), Times(Real(k), times)), Real(len(state_pair.matching_trans)))
             equations.append(equation)
@@ -110,7 +86,7 @@ class FSM_Diff(metaclass=Singleton):
     def compute_scores(self,fsm_1, fsm_2, k):
         out_match_trans = self.matching_transitions(fsm_1,fsm_2,True)
         outcome_out = self.linear_equation_solver(out_match_trans, k, True)
-        
+
         in_match_trans = self.matching_transitions(fsm_1,fsm_2,False)
         outcome_in = self.linear_equation_solver(in_match_trans, k, False)
 
@@ -145,10 +121,10 @@ class FSM_Diff(metaclass=Singleton):
         n_pair = set()
         out_matching = self.pair_matching_transition(fsm_1,fsm_2,s1,s2,True)
         for t_out1, t_out2 in out_matching.matching_trans:
-            n_pair.add(  (t_out1.to_state , t_out2.to_state))
+            n_pair.add(  (t_out1[1] , t_out2[1]))
         in_matching = self.pair_matching_transition(fsm_1,fsm_2,s1,s2,False)
         for t_in1, t_in2 in in_matching.matching_trans:
-            n_pair.add( (t_in1.from_state, t_in2.from_state))
+            n_pair.add( (t_in1[0], t_in2[0]))
         return n_pair
 
     def pick_highest(self, n_pairs, pairs_to_scores):
@@ -174,7 +150,7 @@ class FSM_Diff(metaclass=Singleton):
         k_pairs = set(k_pairs)
 
         # line 3-5
-        key = (fsm_1.initial_state, fsm_2.initial_state)
+        key = (list(fsm_1.nodes)[0], list(fsm_2.nodes)[0])
         if not k_pairs and pairs_to_scores[key] >= 0:
             k_pairs.add(key)
         # line 6

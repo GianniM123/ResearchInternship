@@ -1,66 +1,61 @@
-from fsm import FSM, Transition, State, FSM_Diff, SMT_SOLVERS
+from fsm import FSM_Diff, SMT_SOLVERS
 import fsm
 import getopt, sys
+import networkx as nx
+
+bowling = nx.MultiDiGraph()
+bowling.add_node("Start Game")
+bowling.add_node("Bowling Game")
+bowling.add_node("Pause")
+
+bowling.add_edge("Start Game",      "Bowling Game", input="Start",  output="1")
+bowling.add_edge("Start Game",      "Start Game",   input="Exit",   output="1")
+bowling.add_edge("Start Game",      "Pause",        input="Pause",  output="1")
+bowling.add_edge("Bowling Game",    "Bowling Game", input="Start",  output="0")
+bowling.add_edge("Bowling Game",    "Bowling Game", input="Exit",   output="0")
+bowling.add_edge("Bowling Game",    "Pause",        input="Pause",  output="1")
+bowling.add_edge("Pause",           "Bowling Game", input="Start",  output="1")
+bowling.add_edge("Pause",           "Start Game",   input="Exit",   output="1")
+bowling.add_edge("Pause",           "Pause",        input="Pause",  output="0")
+
+pong = nx.MultiDiGraph()
+pong.add_node("Start Game")
+pong.add_node("Pong Game")
+pong.add_node("Pause")
+
+pong.add_edge("Start Game",     "Pong Game",    input="Start",  output="1"),
+pong.add_edge("Start Game",     "Start Game",   input="Exit",   output="0"),
+pong.add_edge("Start Game",     "Start Game",   input="Pause",  output="0"),
+pong.add_edge("Pong Game",      "Pong Game",    input="Start",  output="0"),
+pong.add_edge("Pong Game",      "Start Game",   input="Exit",   output="1"),
+pong.add_edge("Pong Game",      "Pause",        input="Pause",  output="1"),
+pong.add_edge("Pause",          "Pong Game",    input="Start",  output="1"),
+pong.add_edge("Pause",          "Start Game",   input="Exit",   output="1"),
+pong.add_edge("Pause",          "Pause",        input="Pause",  output="0")
+
+b = nx.MultiDiGraph()
+b.add_node("b0")
+b.add_node("b1")
+b.add_node("b2")
+b.add_node("b3")
+
+b.add_edge("b2","b0",input="b",output="0")
+b.add_edge("b3","b0",input="b",output="0")
+b.add_edge("b0","b1",input="a",output="0")
 
 
+a = nx.MultiDiGraph()
+a.add_node("a0")
+a.add_node("a1")
+a.add_node("a2")
+a.add_node("a3")
+a.add_node("a4")
 
-BowlingS0 = State("Start Game")
-BowlingS1 = State("Bowling Game")
-BowlingS2 = State("Pause")
+a.add_edge("a3","a0",input="b",output="0")
+a.add_edge("a0","a1",input="a",output="0")
+a.add_edge("a0","a2",input="a",output="0")
+a.add_edge("a0","a4",input="b",output="0")
 
-bowling_fsm = FSM([BowlingS0,BowlingS1,BowlingS2], BowlingS0, [
-                        Transition(BowlingS0,BowlingS1,"Start","1"),
-                        Transition(BowlingS0,BowlingS0,"Exit","1"),
-                        Transition(BowlingS0,BowlingS2,"Pause", "1"),
-                        Transition(BowlingS1,BowlingS1,"Start","0"),
-                        Transition(BowlingS1,BowlingS1,"Exit","0"),
-                        Transition(BowlingS1,BowlingS2,"Pause","1"),
-                        Transition(BowlingS2,BowlingS1,"Start","1"),
-                        Transition(BowlingS2,BowlingS0,"Exit","1"),
-                        Transition(BowlingS2,BowlingS2,"Pause","0")
-                        ]
-                    )
-
-PongS0 = State("Start Game")
-PongS1 = State("Pong Game")
-PongS2 = State("Pause")
-
-pong_fsm = FSM([PongS0,PongS1,PongS2], PongS0, [
-                        Transition(PongS0,PongS1,"Start","1"),
-                        Transition(PongS0,PongS0,"Exit","0"),
-                        Transition(PongS0,PongS0,"Pause", "0"),
-                        Transition(PongS1,PongS1,"Start","0"),
-                        Transition(PongS1,PongS0,"Exit","1"),
-                        Transition(PongS1,PongS2,"Pause","1"),
-                        Transition(PongS2,PongS1,"Start","1"),
-                        Transition(PongS2,PongS0,"Exit","1"),
-                        Transition(PongS2,PongS2,"Pause","0")
-                        ]
-                    )
- 
-b0 = State("b0")
-b1 = State("b1")
-b2 = State("b2")
-b3 = State("b3")
-
-b_fsm = FSM([b0,b1,b2,b3],b0,[
-                        Transition(b2,b0,"b","0"),
-                        Transition(b3,b0,"b","0"),
-                        Transition(b0,b1,"a","0")
-])
-
-a0 = State("a0")
-a1 = State("a1")
-a2 = State("a2")
-a3 = State("a3")
-a4 = State("a4")
-
-a_fsm = FSM([a0,a1,a2,a3,a4],a0,[
-                        Transition(a3,a0,"b","0"),
-                        Transition(a0,a1,"a","0"),
-                        Transition(a0,a2,"a","0"),
-                        Transition(a0,a4,"b","0")
-])
 
 
 def main():
@@ -83,7 +78,7 @@ def main():
     except getopt.error as err:
         print(str(err))
 
-    matching_pairs = FSM_Diff().algorithm(bowling_fsm,pong_fsm,0.5,0.2,1)
+    matching_pairs = FSM_Diff().algorithm(bowling,pong,0.5,0.2,1)
 
     print(matching_pairs)
 
