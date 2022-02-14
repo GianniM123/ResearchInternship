@@ -59,8 +59,14 @@ a.add_edge("a0","a4",input="b",output="0")
 
 
 def main():
+    k_value = 0.5
+    threshold = 0.2
+    ratio = 1
+    matching_pair_one = None
+    matching_pair_two = None
+
     try:
-        arguments = getopt.getopt(sys.argv[1:],"hs:",["help","smt"])
+        arguments = getopt.getopt(sys.argv[1:],"dhs:k:t:r:a:b:",["debug","help","smt","k_value","threshold","ratio","matching-first","matching-second"])
 
         for current_arg, current_val in arguments[0]:
             if current_arg in ("-s", "--smt"):
@@ -69,16 +75,32 @@ def main():
                 else:
                     print("invalid smt-solver")
                     return
+            elif current_arg in ("-d", "--debug"):
+                fsm.debug = True
+            elif current_arg in ("-k", "--k_value"):
+                k_value = float(current_val)
+            elif current_arg in ("-t", "--threshold"):
+                threshold = float(current_val)
+            elif current_arg in ("-r", "--ratio"):
+                ratio = float(current_val)
+            elif current_arg in ("-a","--matching-first"):
+                matching_pair_one = current_val
+            elif current_arg in ("-b","--matching-second"):
+                matching_pair_two = current_val
             elif current_arg in ("-h", "--help"):
-                print("Usage: main.py [-s <smt-solver>]")
+                print("Usage: main.py [-s <smt-solver> -k <k value> -t <threshold value> -r <ratio value> -a <matching s1> -b <matching s2> -d]")
                 print("<smt-solver> options:")
                 for solver in SMT_SOLVERS:
                     print('\t' + solver)
                 return
     except getopt.error as err:
         print(str(err))
-
-    matching_pairs = FSM_Diff().algorithm(bowling,pong,0.5,0.2,1)
+    matching_pair = None
+    if (matching_pair_one is None) ^ (matching_pair_two is None):
+        print("Not all matching pairs are set!")
+    elif matching_pair_one is not None and matching_pair_two is not None :
+        matching_pair = (matching_pair_one,matching_pair_two)
+    matching_pairs = FSM_Diff().algorithm(bowling,pong,k_value,threshold,ratio,matching_pair)
 
     print(matching_pairs)
 

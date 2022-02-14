@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from typing import List, Tuple, Dict
-
+from time import time
 
 from pysmt.shortcuts import Symbol, And, GE, Plus, Minus, Times, Equals, Real, get_model
 from pysmt.typing import REAL
@@ -8,7 +8,7 @@ from pysmt.typing import REAL
 SMT_SOLVERS = ["msat","cvc4","z3","yices","btor","picosat","bdd"]
 
 current_solver = "z3"
-
+debug = False
 @dataclass
 class ComparingStates:
     states: Tuple[str,str]
@@ -77,7 +77,11 @@ class FSM_Diff(metaclass=Singleton):
             equation = Equals(Minus(Times(Real(denominator), variable), Times(Real(k), times)), Real(len(state_pair.matching_trans)))
             equations.append(equation)
         formula = And(And( (i for i in domain)), And( (i for i in equations)))
+        if(debug):
+            print(formula.to_smtlib(False))
+        start_time = time()
         model = get_model(formula, solver_name=current_solver)
+        print("%s seconds" % (time() - start_time))
         return_dict = {}
         for i in range(0,len(variables)):
             return_dict[names[i]] = eval(str(model.get_value(variables[i])))
@@ -95,14 +99,16 @@ class FSM_Diff(metaclass=Singleton):
             result_dict[var] = (outcome_out[var] + outcome_in[var]) / 2
         return result_dict
 
-    def identify_landmarks(self, pairs_to_scores,t,r):
+    def identify_landmarks(self, pairs_to_scores,t,r, matching_pair = None):
         filtered_dict = {}
         vars = []
         for var in pairs_to_scores:
             vars.append(var)
             if (pairs_to_scores[var] >= t):
                 filtered_dict[var] = pairs_to_scores[var]
-        landmarks = []
+        landmarks = set()
+        if matching_pair is not None:
+            landmarks.add(matching_pair)
         for var in vars:
             filtered_vars = list(filter(lambda v: v[0] ==var[0] and not v == var, vars))
             is_landmark = True
@@ -110,7 +116,7 @@ class FSM_Diff(metaclass=Singleton):
                 if not (pairs_to_scores[var] >= (pairs_to_scores[f_var] * r) and var in filtered_dict):
                     is_landmark = False
             if is_landmark:
-                landmarks.append(var)
+                landmarks.add(var)
         return landmarks        
 
 
@@ -141,14 +147,17 @@ class FSM_Diff(metaclass=Singleton):
                 new_n_pairs.add(n_pair)
         return new_n_pairs
 
-    def algorithm(self, fsm_1, fsm_2, k, t, r):
+    def algorithm(self, fsm_1, fsm_2, k, t, r, matching_pair = None):
+        if matching_pair is not None:
+            if (matching_pair[0] not in fsm_1.nodes or matching_pair[1] not in fsm_2.nodes):
+                print("Given pairs do not exists in the FSM's")
+                return
+
         # line 1
         pairs_to_scores = self.compute_scores(fsm_1,fsm_2,k)
         
         # line 2
-        k_pairs = self.identify_landmarks(pairs_to_scores,t,r)
-        k_pairs = set(k_pairs)
-
+        k_pairs = self.identify_landmarks(pairs_to_scores,t,r,matching_pair)
         # line 3-5
         key = (list(fsm_1.nodes)[0], list(fsm_2.nodes)[0])
         if not k_pairs and pairs_to_scores[key] >= 0:
