@@ -2,8 +2,11 @@ from dataclasses import dataclass
 from typing import List, Tuple, Dict
 from time import time
 
-from pysmt.shortcuts import Symbol, And, GE, Plus, Minus, Times, Equals, Real, get_model
+from debug import write_smtlib_no_daggify, FILE
+
+from pysmt.shortcuts import Symbol, And, GE, Plus, Minus, Times, Equals, Real, get_model, write_smtlib, read_smtlib, to_smtlib
 from pysmt.typing import REAL
+from pysmt.smtlib.script import SmtLibScript
 
 SMT_SOLVERS = ["msat","cvc4","z3","yices","btor","picosat","bdd"]
 
@@ -78,7 +81,7 @@ class FSM_Diff(metaclass=Singleton):
             equations.append(equation)
         formula = And(And( (i for i in domain)), And( (i for i in equations)))
         if(debug):
-            print(formula.to_smtlib(False))
+            write_smtlib_no_daggify(formula,FILE)
         start_time = time()
         model = get_model(formula, solver_name=current_solver)
         print("%s seconds" % (time() - start_time))
