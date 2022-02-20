@@ -66,7 +66,7 @@ def main():
     matching_pair_two = None
 
     try:
-        arguments = getopt.getopt(sys.argv[1:],"dhs:k:t:r:a:b:",["debug","help","smt","k_value","threshold","ratio","matching-first","matching-second"])
+        arguments = getopt.getopt(sys.argv[1:],"dhts:k:t:r:a:b:",["time","debug","help","smt","k_value","threshold","ratio","matching-first","matching-second"])
 
         for current_arg, current_val in arguments[0]:
             if current_arg in ("-s", "--smt"):
@@ -77,6 +77,8 @@ def main():
                     return
             elif current_arg in ("-d", "--debug"):
                 fsm.debug = True
+            elif current_arg in ("-t", "--time"):
+                fsm.timing = True
             elif current_arg in ("-k", "--k_value"):
                 k_value = float(current_val)
             elif current_arg in ("-t", "--threshold"):
