@@ -1,0 +1,14 @@
+digraph{
+E
+F 
+G 
+H 
+I 
+E -> F [label="load"]
+E -> H [label="exit"]
+F -> E [label="close"]
+F -> G [label="edit"]
+F -> I [label="save as"]
+I -> F [label="ok"]
+G -> G [label="edit"]
+}

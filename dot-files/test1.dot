@@ -1,0 +1,12 @@
+digraph{
+A
+B
+C
+D
+A -> B [label="load"]
+A -> C [label="exit"]
+B -> A [label="close"]
+B -> B [label="edit"]
+B -> D [label="save as"]
+D -> B [label="ok"]
+}

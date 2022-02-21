@@ -1,11 +1,17 @@
+from cProfile import label
 from dataclasses import dataclass
 from typing import List, Tuple, Dict
 from time import time
+
+from numpy import kaiser
 
 from debug import print_smtlib
 
 from pysmt.shortcuts import Symbol, And, GE, Plus, Minus, Times, Equals, Real, get_model, write_smtlib, read_smtlib, to_smtlib
 from pysmt.typing import REAL
+
+import networkx as nx
+import string
 
 SMT_SOLVERS = ["msat","cvc4","z3","yices","btor","picosat","bdd"]
 
@@ -42,7 +48,7 @@ class FSM_Diff(metaclass=Singleton):
         for t1 in used_trans1:
             matched = False
             for t2 in used_trans2:
-                if t1[2]["input"] == t2[2]["input"] and t1[2]["output"] == t2[2]["output"]:
+                if t1[2]["label"] == t2[2]["label"]:
                     state_compare.matching_trans.append((t1,t2))
                     matched = True
             if not matched:
@@ -50,7 +56,7 @@ class FSM_Diff(metaclass=Singleton):
         for t2 in used_trans2:
             matched = False
             for t1 in used_trans1:
-                if t1[2]["input"] == t2[2]["input"] and t1[2]["output"] == t2[2]["output"]:
+                if t1[2]["label"] == t2[2]["label"]:
                     matched = True
             if not matched:
                 state_compare.non_matching_trans[1].append(t2)
@@ -87,7 +93,8 @@ class FSM_Diff(metaclass=Singleton):
             start_time = time()
         model = get_model(formula, solver_name=current_solver)
         if timing:
-            print("%s seconds" % (time() - start_time))
+            print("%s seconds SMT execution for " % (time() - start_time), end="")
+            print("outgoing transitions" if out else "incoming transitions")
         return_dict = {}
         for i in range(0,len(variables)):
             return_dict[names[i]] = eval(str(model.get_value(variables[i])))
@@ -153,6 +160,87 @@ class FSM_Diff(metaclass=Singleton):
                 new_n_pairs.add(n_pair)
         return new_n_pairs
 
+    def added_transitions(self, fsm_1, fsm_2, k_pairs):
+        added_transitions = []
+        for edge2 in fsm_2.edges.data():
+            exists = False
+            for edge1 in fsm_1.edges.data():
+                if (edge1[0],edge2[0]) in k_pairs and (edge1[1],edge2[1]) in k_pairs and edge2[2]["label"] == edge1[2]["label"]:
+                    exists = True
+            if not exists:
+                added_transitions.append(edge2)
+        return added_transitions
+
+    def removed_transitions(self, fsm_1, fsm_2, k_pairs):
+        removed_transitions = []
+        for edge1 in fsm_1.edges.data():
+            exists = False
+            for edge2 in fsm_2.edges.data():
+                if (edge1[0],edge2[0]) in k_pairs and (edge1[1],edge2[1]) in k_pairs and edge2[2]["label"] == edge1[2]["label"]:
+                    exists = True
+            if not exists:
+                removed_transitions.append(edge1)
+        return removed_transitions
+
+    def fresh_var(self,index):
+        letters = string.ascii_lowercase
+        value = 1
+        if index >= len(letters):
+            value = int(index / len(letters)) + 1
+        return (letters[index] * value)
+
+    def annotade_edges(self,graph,k_pairs,set,color, index, nr_of_states):
+        
+        added_dict = {}
+        for add in set:
+            from_state = None
+            for k in k_pairs:
+                if k[index] == add[0]:
+                    from_state = self.fresh_var(k_pairs.index(k))
+            if from_state is None and add[0] in added_dict.keys():
+                from_state = self.fresh_var(added_dict[add[0]])
+            elif from_state is None:
+                num = nr_of_states + len(added_dict)
+                from_state = self.fresh_var(num)
+                added_dict[add[0]] = num
+            
+            to_state = None
+            for k in k_pairs:
+                if k[index] == add[1]:
+                    to_state = self.fresh_var(k_pairs.index(k))
+            if to_state is None and add[1] in added_dict.keys():
+                to_state = self.fresh_var(added_dict[add[1]])
+            elif to_state is None:
+                num = nr_of_states + len(added_dict)
+                to_state = self.fresh_var(num)
+                added_dict[add[1]] = num
+                graph.add_node(to_state,color=color)
+            
+            graph.add_edge(from_state,to_state,color=color,label=add[2]["label"])
+        
+        return nr_of_states + len(added_dict)
+    
+
+    def annotade_graph(self, fsm_1, fsm_2, k_pairs, added, removed):
+        k_pairs = list(k_pairs)
+        graph = nx.MultiDiGraph()
+        
+
+        for i in range(0,len(k_pairs)):
+            graph.add_node(self.fresh_var(i))
+
+        for edge1 in fsm_1.edges.data():
+            for edge2 in fsm_2.edges.data():
+                if (edge1[0],edge2[0]) in k_pairs and (edge1[1],edge2[1]) in k_pairs and edge2[2]["label"] == edge1[2]["label"]:
+                    from_state = self.fresh_var(k_pairs.index((edge1[0],edge2[0])))
+                    to_state = self.fresh_var(k_pairs.index((edge1[1],edge2[1])))
+                    graph.add_edge(from_state,to_state, label=edge2[2]["label"])
+        
+        nr_of_states = self.annotade_edges(graph,k_pairs,added,"green",1,len(graph.nodes))
+        self.annotade_edges(graph,k_pairs,removed,"red",0,nr_of_states)
+        return graph
+
+    
     def algorithm(self, fsm_1, fsm_2, k, t, r, matching_pair = None):
         if matching_pair is not None:
             if (matching_pair[0] not in fsm_1.nodes or matching_pair[1] not in fsm_2.nodes):
@@ -190,7 +278,10 @@ class FSM_Diff(metaclass=Singleton):
             for k in k_pairs:
                 n_pairs = self.remove_conflicts(n_pairs,k)
     
-        return k_pairs
+        added = self.added_transitions(fsm_1,fsm_2,k_pairs)
+        removed = self.removed_transitions(fsm_1,fsm_2,k_pairs)
+        graph = self.annotade_graph(fsm_1,fsm_2,k_pairs,added,removed)
+        return graph
         
 
 
