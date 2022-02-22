@@ -189,6 +189,7 @@ class FSM_Diff(metaclass=Singleton):
             value = int(index / len(letters)) + 1
         return (letters[index] * value)
 
+    
     def annotade_edges(self,graph,k_pairs,set,color, index, nr_of_states):
         
         added_dict = {}
@@ -203,6 +204,7 @@ class FSM_Diff(metaclass=Singleton):
                 num = nr_of_states + len(added_dict)
                 from_state = self.fresh_var(num)
                 added_dict[add[0]] = num
+                graph.add_node(from_state,color=color)
             
             to_state = None
             for k in k_pairs:
@@ -225,7 +227,6 @@ class FSM_Diff(metaclass=Singleton):
         k_pairs = list(k_pairs)
         graph = nx.MultiDiGraph()
         
-
         for i in range(0,len(k_pairs)):
             graph.add_node(self.fresh_var(i))
 
