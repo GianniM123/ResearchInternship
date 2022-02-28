@@ -1,11 +1,10 @@
 from cProfile import label
 from dataclasses import dataclass
+
 from typing import List, Tuple, Dict
 from time import time
 
-from numpy import kaiser
-
-from debug import print_smtlib
+from debug import print_smtlib, write_statistics
 
 from pysmt.shortcuts import Symbol, And, GE, Plus, Minus, Times, Equals, Real, get_model, write_smtlib, read_smtlib, to_smtlib
 from pysmt.typing import REAL
@@ -18,6 +17,7 @@ SMT_SOLVERS = ["msat","cvc4","z3","yices","btor","picosat","bdd"]
 current_solver = "z3"
 debug = False
 timing = False
+performance = False
 
 @dataclass
 class ComparingStates:
@@ -222,25 +222,49 @@ class FSM_Diff(metaclass=Singleton):
         
         return nr_of_states + len(added_dict)
     
-
-    def annotade_graph(self, fsm_1, fsm_2, k_pairs, added, removed):
+    def matched_k_pairs_transitions(self, fsm_1, fsm_2, k_pairs):
+        edges = []
         k_pairs = list(k_pairs)
-        graph = nx.MultiDiGraph()
-        
-        for i in range(0,len(k_pairs)):
-            graph.add_node(self.fresh_var(i))
-
         for edge1 in fsm_1.edges.data():
             for edge2 in fsm_2.edges.data():
                 if (edge1[0],edge2[0]) in k_pairs and (edge1[1],edge2[1]) in k_pairs and edge2[2]["label"] == edge1[2]["label"]:
                     from_state = self.fresh_var(k_pairs.index((edge1[0],edge2[0])))
                     to_state = self.fresh_var(k_pairs.index((edge1[1],edge2[1])))
-                    graph.add_edge(from_state,to_state, label=edge2[2]["label"])
+                    edges.append((from_state,to_state,edge2[2]["label"]))
+        return edges
+
+    def annotade_graph(self, k_pairs, added, removed, matched):
+        graph = nx.MultiDiGraph()
+        k_pairs = list(k_pairs)
+        for i in range(0,len(k_pairs)):
+            graph.add_node(self.fresh_var(i))
+
+        for i in matched:
+            graph.add_edge(i[0],i[1], label=i[2])
         
         nr_of_states = self.annotade_edges(graph,k_pairs,added,"green",1,len(graph.nodes))
         self.annotade_edges(graph,k_pairs,removed,"red",0,nr_of_states)
         return graph
 
+    def performance_matrix(self, fsm_1, FP, FN):
+        TP = []
+        for edge in fsm_1.edges.data():
+            found = False
+            for rem in FN:
+                if edge[0] == rem[0] and edge[1] == rem[1] and edge[2] == rem[2]:
+                    found = True
+            if not found:
+                TP.append(edge)
+
+        return_dict = dict()
+        return_dict["precision"] = len(TP) / (len(TP) + len(FP)) # FP is guaranteed to be not in TP, so can just be added
+        return_dict["recall"] = len(TP) / (len(TP) + len(FN)) # FN is guarenteeed to be not in TP, so can just be added
+        return_dict["f-measure"] = (2 * return_dict["precision"] * return_dict["recall"]) / (return_dict["precision"] + return_dict["recall"])
+
+        return return_dict
+        
+    def statistics_graph(self, graph):
+        return {"States": len(graph.nodes), "Transitions": len(graph.edges)}
     
     def algorithm(self, fsm_1, fsm_2, k, t, r, matching_pair = None):
         if matching_pair is not None:
@@ -281,7 +305,16 @@ class FSM_Diff(metaclass=Singleton):
     
         added = self.added_transitions(fsm_1,fsm_2,k_pairs)
         removed = self.removed_transitions(fsm_1,fsm_2,k_pairs)
-        graph = self.annotade_graph(fsm_1,fsm_2,k_pairs,added,removed)
+        matched = self.matched_k_pairs_transitions(fsm_1,fsm_2,k_pairs)
+        graph = self.annotade_graph(k_pairs,added,removed,matched)
+
+        matrix = self.performance_matrix(fsm_1,added,removed)
+        statistics = { "Reference" : self.statistics_graph(fsm_1), "Updated" : self.statistics_graph(fsm_2), "Output" : self.statistics_graph(graph)}
+        output = {"Performance matrix" : matrix, "Model statistics" : statistics}
+        if performance:
+            print(output)
+        write_statistics(output)
+
         return graph
         
 
