@@ -246,7 +246,7 @@ class FSM_Diff(metaclass=Singleton):
         self.annotade_edges(graph,k_pairs,removed,"red",0,nr_of_states)
         return graph
 
-    def performance_matrix(self, fsm_1, FP, FN):
+    def performance_matrix(self, fsm_1, FP, FN, dict):
         TP = []
         for edge in fsm_1.edges.data():
             found = False
@@ -256,12 +256,10 @@ class FSM_Diff(metaclass=Singleton):
             if not found:
                 TP.append(edge)
 
-        return_dict = dict()
-        return_dict["precision"] = len(TP) / (len(TP) + len(FP)) # FP is guaranteed to be not in TP, so can just be added
-        return_dict["recall"] = len(TP) / (len(TP) + len(FN)) # FN is guarenteeed to be not in TP, so can just be added
-        return_dict["f-measure"] = (2 * return_dict["precision"] * return_dict["recall"]) / (return_dict["precision"] + return_dict["recall"])
+        dict["precision"] = len(TP) / (len(TP) + len(FP)) # FP is guaranteed to be not in TP, so can just be added
+        dict["recall"] = len(TP) / (len(TP) + len(FN)) # FN is guarenteeed to be not in TP, so can just be added
+        dict["f-measure"] = (2 * dict["precision"] * dict["recall"]) / (dict["precision"] + dict["recall"])
 
-        return return_dict
         
     def statistics_graph(self, graph):
         return {"States": len(graph.nodes), "Transitions": len(graph.edges)}
@@ -308,12 +306,12 @@ class FSM_Diff(metaclass=Singleton):
         matched = self.matched_k_pairs_transitions(fsm_1,fsm_2,k_pairs)
         graph = self.annotade_graph(k_pairs,added,removed,matched)
 
-        matrix = self.performance_matrix(fsm_1,added,removed)
-        statistics = { "Reference" : self.statistics_graph(fsm_1), "Updated" : self.statistics_graph(fsm_2), "Output" : self.statistics_graph(graph)}
-        output = {"Performance matrix" : matrix, "Model statistics" : statistics}
+        self.performance_matrix(fsm_1,added,removed,graph.graph)
+        graph.graph["Reference"] = self.statistics_graph(fsm_1)
+        graph.graph["Updated"] = self.statistics_graph(fsm_2)
+        graph.graph["Output"] = self.statistics_graph(graph)
         if performance:
-            print(output)
-        write_statistics(output)
+            print(graph.graph)
 
         return graph
         

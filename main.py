@@ -40,11 +40,11 @@ def main():
             elif current_arg in ("-b","--matching-second"):
                 matching_pair_two = current_val
             elif current_arg in ("--ref"):
-                reference_model = nx.drawing.nx_pydot.read_dot(current_val)
+                reference_model = nx.drawing.nx_agraph.read_dot(current_val)
             elif current_arg in ("-o", "--out"):
                 output_file = current_val
             elif current_arg in ("--upd"):
-                updated_model = nx.drawing.nx_pydot.read_dot(current_val)
+                updated_model = nx.drawing.nx_agraph.read_dot(current_val)
             elif current_arg in ("-h", "--help"):
                 print("Usage: main.py --ref=<reference dot model> --upd=<updated dot model> [-d (print smt) -i (print time smt takes) -p (performance matrix) -o <output file> -s <smt-solver> -k <k value> -t <threshold value> -r <ratio value> -a <matching s1> -b <matching s2>]")
                 print("<smt-solver> options:")
@@ -65,7 +65,7 @@ def main():
         matching_pair = (matching_pair_one,matching_pair_two)
     
     graph = FSM_Diff().algorithm(reference_model,updated_model,k_value,threshold,ratio,matching_pair)
-    nx.drawing.nx_pydot.write_dot(graph,output_file)
+    nx.drawing.nx_agraph.write_dot(graph,output_file)
 
 if __name__ == "__main__":
     main()
