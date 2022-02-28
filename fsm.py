@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import List, Tuple, Dict
 from time import time
 
-from debug import print_smtlib, write_statistics
+from debug import print_smtlib
 
 from pysmt.shortcuts import Symbol, And, GE, Plus, Minus, Times, Equals, Real, get_model, write_smtlib, read_smtlib, to_smtlib
 from pysmt.typing import REAL
@@ -89,11 +89,14 @@ class FSM_Diff(metaclass=Singleton):
         formula = And(And( (i for i in domain)), And( (i for i in equations)))
         if(debug):
             print_smtlib(formula)
-        if timing:
-            start_time = time()
+        start_time = time()
         model = get_model(formula, solver_name=current_solver)
+        if out:
+            self.out_time = (time() - start_time)
+        else:
+            self.in_time = (time() - start_time)
         if timing:
-            print("%s seconds SMT execution for " % (time() - start_time), end="")
+            print("%s seconds SMT execution for " % self.out_time if out else self.in_time, end="")
             print("outgoing transitions" if out else "incoming transitions")
         return_dict = {}
         for i in range(0,len(variables)):
@@ -310,6 +313,9 @@ class FSM_Diff(metaclass=Singleton):
         graph.graph["Reference"] = self.statistics_graph(fsm_1)
         graph.graph["Updated"] = self.statistics_graph(fsm_2)
         graph.graph["Output"] = self.statistics_graph(graph)
+        graph.graph["Outgoing time"] = "%s" % self.out_time
+        graph.graph["Incoming time"] = "%s" % self.in_time
+        graph.graph["Solver"] = current_solver
         if performance:
             print(graph.graph)
 

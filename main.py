@@ -1,3 +1,4 @@
+from weakref import ref
 from fsm import FSM_Diff, SMT_SOLVERS
 import fsm
 import debug
@@ -64,6 +65,13 @@ def main():
     elif matching_pair_one is not None and matching_pair_two is not None :
         matching_pair = (matching_pair_one,matching_pair_two)
     
+    for edge in reference_model.edges.data():
+        if not "label" in edge[2]:
+            edge[2]["label"] = ""
+    for edge in updated_model.edges.data():
+        if not "label" in edge[2]:
+            edge[2]["label"] = ""
+
     graph = FSM_Diff().algorithm(reference_model,updated_model,k_value,threshold,ratio,matching_pair)
     nx.drawing.nx_agraph.write_dot(graph,output_file)
 
