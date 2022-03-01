@@ -13,10 +13,17 @@ do
   do
     for solver in ${sat_solvers[@]};
     do
-        name="../out/${file1///}-${file2///}-${solver}.dot"
+        f1=${file1#${openssl_dir}}
+        f2=${file2#${openssl_dir}}
+        f1=${f1///}
+        f2=${f2///}
+        name="../out/${f1%lea*}-${f2%lea*}-${solver}.dot"
         python3 main.py --ref=$file1 --upd=$file2 -o $name -t 0.5 -s $solver
+        
         echo $name
     done
   done
 done
+
+python3 add_date.py "../out/"
 
