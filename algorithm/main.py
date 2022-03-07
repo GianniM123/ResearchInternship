@@ -15,7 +15,7 @@ def main():
     updated_model = None
     output_file = "out.dot"
     try:
-        arguments = getopt.getopt(sys.argv[1:],"idphs:k:t:r:a:b:o:",["time","debug","performance","help","smt","k_value","threshold","ratio","matching-first","matching-second", "ref=", "upd=", "out="])
+        arguments = getopt.getopt(sys.argv[1:],"idlphs:k:t:r:a:b:o:",["time","debug","log","performance","help","smt","k_value","threshold","ratio","matching-first","matching-second", "ref=", "upd=", "out="])
 
         for current_arg, current_val in arguments[0]:
             if current_arg in ("-s", "--smt"):
@@ -30,6 +30,8 @@ def main():
                 fsm.timing = True
             elif current_arg in ("-p", "--performance"):
                 fsm.performance = True
+            elif current_arg in ("-l", "--log"):
+                fsm.logging = True
             elif current_arg in ("-k", "--k_value"):
                 k_value = float(current_val)
             elif current_arg in ("-t", "--threshold"):
@@ -47,7 +49,7 @@ def main():
             elif current_arg in ("--upd"):
                 updated_model = nx.drawing.nx_agraph.read_dot(current_val)
             elif current_arg in ("-h", "--help"):
-                print("Usage: main.py --ref=<reference dot model> --upd=<updated dot model> [-d (print smt) -i (print time smt takes) -p (performance matrix) -o <output file> -s <smt-solver> -k <k value> -t <threshold value> -r <ratio value> -a <matching s1> -b <matching s2>]")
+                print("Usage: main.py --ref=<reference dot model> --upd=<updated dot model> [-l (add logging in out file) -d (print smt) -i (print time smt takes) -p (performance matrix) -o <output file> -s <smt-solver> -k <k value> -t <threshold value> -r <ratio value> -a <matching s1> -b <matching s2>]")
                 print("<smt-solver> options:")
                 for solver in SMT_SOLVERS:
                     print('\t' + solver)

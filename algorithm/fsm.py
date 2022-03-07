@@ -18,6 +18,7 @@ current_solver = "z3"
 debug = False
 timing = False
 performance = False
+logging = False
 
 @dataclass
 class ComparingStates:
@@ -267,6 +268,15 @@ class FSM_Diff(metaclass=Singleton):
     def statistics_graph(self, graph):
         return {"States": len(graph.nodes), "Transitions": len(graph.edges)}
     
+    def logging(self, fsm_1, fsm_2, added, removed, graph, dict):
+        self.performance_matrix(fsm_1,added,removed,dict)
+        dict["Reference"] = self.statistics_graph(fsm_1)
+        dict["Updated"] = self.statistics_graph(fsm_2)
+        dict["Output"] = self.statistics_graph(graph)
+        dict["Outgoing time"] = "%s" % self.out_time
+        dict["Incoming time"] = "%s" % self.in_time
+        dict["Solver"] = current_solver
+
     def algorithm(self, fsm_1, fsm_2, k, t, r, matching_pair = None):
         if matching_pair is not None:
             if (matching_pair[0] not in fsm_1.nodes or matching_pair[1] not in fsm_2.nodes):
@@ -309,15 +319,16 @@ class FSM_Diff(metaclass=Singleton):
         matched = self.matched_k_pairs_transitions(fsm_1,fsm_2,k_pairs)
         graph = self.annotade_graph(k_pairs,added,removed,matched)
 
-        self.performance_matrix(fsm_1,added,removed,graph.graph)
-        graph.graph["Reference"] = self.statistics_graph(fsm_1)
-        graph.graph["Updated"] = self.statistics_graph(fsm_2)
-        graph.graph["Output"] = self.statistics_graph(graph)
-        graph.graph["Outgoing time"] = "%s" % self.out_time
-        graph.graph["Incoming time"] = "%s" % self.in_time
-        graph.graph["Solver"] = current_solver
-        if performance:
+        if logging:
+            self.logging(fsm_1,fsm_2,added,removed,graph,graph.graph)
+
+        if performance and logging:
             print(graph.graph)
+        elif performance and not logging:
+            dict = {}
+            self.logging(fsm_1,fsm_2,added,removed,graph,dict)
+            print (dict)
+
 
         return graph
         

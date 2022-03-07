@@ -18,7 +18,7 @@ do
         f1=${f1///}
         f2=${f2///}
         name="../out_openssl/${f1%lea*}-${f2%lea*}-${solver}.dot"
-        python3 ../algorithm/main.py --ref=$file1 --upd=$file2 -o $name -t 0.5 -s $solver
+        python3 ../algorithm/main.py --ref=$file1 --upd=$file2 -o $name -t 0.5 -s $solver -l 
         
         echo "${name}"
     done
