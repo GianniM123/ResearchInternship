@@ -129,5 +129,4 @@ dmypy.json
 .pyre/
 
 out.dot
-/out/*
-/out_openssl/*
+/out*
