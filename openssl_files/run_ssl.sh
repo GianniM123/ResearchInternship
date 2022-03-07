@@ -1,6 +1,6 @@
 #!/bin/bash
 
-openssl_dir=../openssl_test
+openssl_dir=../openssl_models
 
 
 
@@ -18,7 +18,7 @@ do
         f1=${f1///}
         f2=${f2///}
         name="../out/${f1%lea*}-${f2%lea*}-${solver}.dot"
-        python3 main.py --ref=$file1 --upd=$file2 -o $name -t 0.5 -s $solver
+        ../algorithm/python3 main.py --ref=$file1 --upd=$file2 -o $name -t 0.5 -s $solver
         
         echo $name
     done
