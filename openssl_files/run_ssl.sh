@@ -6,7 +6,7 @@ openssl_dir=../openssl_models
 
 declare -a sat_solvers=("msat" "cvc4" "z3" "yices")
 # "btor" "picosat" "bdd" do not suppport logic
-
+mkdir -p ../out_openssl
 for file1 in "$openssl_dir"/*/*/*
 do
   for file2 in "$openssl_dir"/*/*/*
@@ -17,10 +17,10 @@ do
         f2=${file2#${openssl_dir}}
         f1=${f1///}
         f2=${f2///}
-        name="../out/${f1%lea*}-${f2%lea*}-${solver}.dot"
-        ../algorithm/python3 main.py --ref=$file1 --upd=$file2 -o $name -t 0.5 -s $solver
+        name="../out_openssl/${f1%lea*}-${f2%lea*}-${solver}.dot"
+        python3 ../algorithm/main.py --ref=$file1 --upd=$file2 -o $name -t 0.5 -s $solver
         
-        echo $name
+        echo "${name}"
     done
   done
 done
