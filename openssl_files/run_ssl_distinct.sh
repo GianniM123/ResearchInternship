@@ -2,7 +2,7 @@
 
 openssl_dir=../openssl_models
 out_dir=../out_openssl_distinct
-end=10
+END=10
 
 
 declare -a sat_solvers=("msat" "cvc4" "z3" "yices")
