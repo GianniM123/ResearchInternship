@@ -191,6 +191,7 @@ class FSM_Diff(metaclass=Singleton):
         value = 1
         if index >= len(letters):
             value = int(index / len(letters)) + 1
+            index = index % len(letters)
         return (letters[index] * value)
 
     
