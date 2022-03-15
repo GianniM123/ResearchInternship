@@ -12,11 +12,9 @@ def extract_info_from_model(file):
     model = nx.drawing.nx_agraph.read_dot(file)
     return_dict = {}
     splitted = file.split("-")
-    v1 = splitted[0].split("/")[2]
-    v2 = splitted[1]
     v3 = splitted[3].split(".")[0]
-    return_dict["reference version"] = v1.replace(".","_",3)
-    return_dict["updated version"] = v2.replace(".","_",3)
+    return_dict["reference version"] = ast.literal_eval(model.graph["Reference"])["Filename"]
+    return_dict["updated version"] = ast.literal_eval(model.graph["Updated"])["Filename"]
     return_dict["SMT solver"] =  model.graph["Solver"]
     return_dict["iteration"] =  v3
     return_dict["incoming time"] =  model.graph["Incoming time"]
