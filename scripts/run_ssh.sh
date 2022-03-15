@@ -2,7 +2,7 @@
 
 subjects_dir=../subjects/ssh/
 out_dir=../results/ssh
-end=10
+end=5
 
 
 declare -a sat_solvers=("msat" "cvc4" "z3" "yices")
@@ -24,7 +24,7 @@ do
                 f1=${f1///}
                 f2=${f2///}
                 name="${out_dir}/${f1%.*}-${f2%.*}-${solver}-${i}.dot"
-                python3 ../algorithm/main.py --ref=$file1 --upd=$file2 -o $name -t 0.5 -s $solver -l
+                python3 ../algorithm/main.py --ref=$file1 --upd=$file2 -o $name -t 0.8 -s $solver -l
 
                 echo ${name} 
             done
