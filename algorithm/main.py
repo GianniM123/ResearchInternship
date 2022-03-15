@@ -13,6 +13,8 @@ def main():
     matching_pair_two = None
     reference_model = None
     updated_model = None
+    reference_filename = None
+    updated_filename = None
     output_file = "out.dot"
     try:
         arguments = getopt.getopt(sys.argv[1:],"idlphs:k:t:r:a:b:o:",["time","debug","log","performance","help","smt","k_value","threshold","ratio","matching-first","matching-second", "ref=", "upd=", "out="])
@@ -44,10 +46,12 @@ def main():
                 matching_pair_two = current_val
             elif current_arg in ("--ref"):
                 reference_model = nx.drawing.nx_agraph.read_dot(current_val)
+                reference_filename = current_val
             elif current_arg in ("-o", "--out"):
                 output_file = current_val
             elif current_arg in ("--upd"):
                 updated_model = nx.drawing.nx_agraph.read_dot(current_val)
+                updated_filename = current_val
             elif current_arg in ("-h", "--help"):
                 print("Usage: main.py --ref=<reference dot model> --upd=<updated dot model> [-l (add logging in out file) -d (print smt) -i (print time smt takes) -p (performance matrix) -o <output file> -s <smt-solver> -k <k value> -t <threshold value> -r <ratio value> -a <matching s1> -b <matching s2>]")
                 print("<smt-solver> options:")
@@ -75,6 +79,10 @@ def main():
             edge[2]["label"] = ""
 
     graph = FSM_Diff().algorithm(reference_model,updated_model,k_value,threshold,ratio,matching_pair)
+    if fsm.logging:
+        for idx,val in {"Reference":reference_filename, "Updated":updated_filename, "Output":output_file}.items():
+            graph.graph.setdefault(idx,{})
+            graph.graph[idx]["Filename"] = val
     nx.drawing.nx_agraph.write_dot(graph,output_file)
 
 if __name__ == "__main__":
