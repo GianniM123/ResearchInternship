@@ -1,8 +1,8 @@
 #!/bin/bash
 
 MAX_PROCS=4
-subjects_dir=../subjects/tcp/
-out_dir=../results/tcp
+subjects_dir=../subjects/mqtt/
+out_dir=../results/mqtt
 end=30
 
 
@@ -10,7 +10,7 @@ declare -a sat_solvers=("msat" "cvc4" "z3" "yices")
 # "btor" "picosat" "bdd" do not suppport logic
 mkdir -p $out_dir
 
-files=$(md5sum `find ../subjects/tcp/ -name "*_Server.dot"` | sort | uniq -w 33 | cut -c35-)
+files=$(md5sum `find ../subjects/mqtt/ -name "*.dot"` | sort | uniq -w 33 | cut -c35-)
 
 for i in $(seq 1 $end)
 do
