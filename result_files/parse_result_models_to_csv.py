@@ -5,8 +5,6 @@ import csv
 import ast
 from os import listdir
 
-import re
-
 def extract_info_from_model(file):
     
     model = nx.drawing.nx_agraph.read_dot(file)
