@@ -1,10 +1,16 @@
-from fsm import FSM_Diff, SMT_SOLVERS
-import fsm
-import debug
-import getopt, sys
+'''Main module'''
+import getopt
+import sys
+
 import networkx as nx
 
+from fsm import FSMDiff, SMT_SOLVERS
+import fsm
+import debug
+
+
 def main():
+    '''Main function for reading the commandline parameters and execution the FSM_diff algorithm'''
     k_value = 0.5
     threshold = 0.2
     ratio = 1
@@ -69,7 +75,7 @@ def main():
         print("Not all matching pairs are set!")
     elif matching_pair_one is not None and matching_pair_two is not None :
         matching_pair = (matching_pair_one,matching_pair_two)
-    
+
     for edge in reference_model.edges.data():
         if not "label" in edge[2]:
             edge[2]["label"] = ""
@@ -77,7 +83,7 @@ def main():
         if not "label" in edge[2]:
             edge[2]["label"] = ""
 
-    graph = FSM_Diff().algorithm(reference_model,updated_model,k_value,threshold,ratio,matching_pair)
+    graph = FSMDiff().algorithm(reference_model,updated_model,k_value,threshold,ratio,matching_pair)
     if fsm.logging:
         for idx,val in {"Reference":reference_filename, "Updated":updated_filename, "Output":output_file}.items():
             graph.graph.setdefault(idx,{})
