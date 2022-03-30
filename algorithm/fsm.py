@@ -11,7 +11,7 @@ from pysmt.typing import REAL
 import networkx as nx
 import string
 
-SMT_SOLVERS = ["msat","cvc4","z3","yices","btor","picosat","bdd"]
+SMT_SOLVERS = ["msat","cvc4","z3","yices"]
 
 current_solver = "z3"
 debug = False
