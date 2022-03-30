@@ -5,6 +5,11 @@
 - `dot-files` contains some example dot-files which can be used in the algorithm
 - `openssl_files` contains the files for running the openssl modesl
 - `openssl_models` contains the models from [tlsprint](https://github.com/tlsprint/models/tree/master/models/openssl)
+- `result_files` contains the outcome csv-files and the script to create them
+- `results` contains the outcome of the algorithm of the `subjects`
+- `scripts` contains the files to run the `subjects` and saves them in `results`
+- `statistics` contains the jupyter notebook with research questions and answers
+- `subjects` contains the dot-files of different topics
 
 ## Dependencies
 <ul>
