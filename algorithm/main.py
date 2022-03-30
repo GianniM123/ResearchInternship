@@ -1,4 +1,3 @@
-from weakref import ref
 from fsm import FSM_Diff, SMT_SOLVERS
 import fsm
 import debug
