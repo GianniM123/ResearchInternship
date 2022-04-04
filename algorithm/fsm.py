@@ -3,6 +3,7 @@ from dataclasses import dataclass
 import string
 from typing import List, Tuple, Dict
 from time import time
+import warnings
 
 from pysmt.shortcuts import Symbol, And, GE, Plus, Minus, Times, Equals, Real, get_model
 from pysmt.typing import REAL
@@ -371,6 +372,7 @@ class FSMDiff(metaclass=Singleton):
 
         if perfomance_dict["recall"] == 0 and perfomance_dict["precision"] == 0: # if none of the transitions match, recall and precision are 0
             perfomance_dict["f-measure"] = 0
+            warnings.warn("UndefinedMetricWarning: precision and recall are 0, f-measure can't be calcualted (defaults to 0)", Warning)
         else:
             perfomance_dict["f-measure"] = (2 * perfomance_dict["precision"] * perfomance_dict["recall"]) / (perfomance_dict["precision"] + perfomance_dict["recall"])
 
