@@ -368,8 +368,11 @@ class FSMDiff(metaclass=Singleton):
 
         perfomance_dict["precision"] = len(TP) / (len(TP) + len(FP)) # FP is guaranteed to be not in TP, so can just be added
         perfomance_dict["recall"] = len(TP) / (len(TP) + len(FN)) # FN is guarenteeed to be not in TP, so can just be added
-        perfomance_dict["f-measure"] = (2 * perfomance_dict["precision"] * perfomance_dict["recall"]) / (perfomance_dict["precision"] + perfomance_dict["recall"])
 
+        if perfomance_dict["recall"] == 0 and perfomance_dict["precision"] == 0: # if none of the transitions match, recall and precision are 0
+            perfomance_dict["f-measure"] = 0
+        else:
+            perfomance_dict["f-measure"] = (2 * perfomance_dict["precision"] * perfomance_dict["recall"]) / (perfomance_dict["precision"] + perfomance_dict["recall"])
 
     def statistics_graph(self, graph):
         ''' return basis statistics for the graph '''
