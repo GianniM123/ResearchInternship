@@ -18,6 +18,7 @@ debug = False
 timing = False
 performance = False
 logging = False
+equation = False
 
 @dataclass
 class ComparingStates:
@@ -89,14 +90,19 @@ class FSMDiff(metaclass=Singleton):
 
         return state_compare
 
-    def matching_transitions(self,fsm_1,fsm_2,out):
+    def matching_transitions(self,fsm_1,fsm_2,out, matching_pairs):
         '''
         Run pair_matching_transition with all different pairs possible
         '''
         outcome = []
         for s1 in fsm_1.nodes:
             for s2 in fsm_2.nodes:
-                outcome.append(self.pair_matching_transition(fsm_1,fsm_2,s1,s2,out))
+                is_a_match = False
+                for pair in matching_pairs:
+                    if s1 == pair[0] or s2 == pair[1]:
+                        is_a_match = True
+                if not is_a_match:
+                    outcome.append(self.pair_matching_transition(fsm_1,fsm_2,s1,s2,out))
         return outcome
 
     def linear_equation_solver(self, state_pairs, k, out):
@@ -149,27 +155,29 @@ class FSMDiff(metaclass=Singleton):
             return_dict[names[i]] = eval(str(model.get_value(variables[i])))
         return return_dict
 
-    def compute_scores(self,fsm_1, fsm_2, k):
+    def compute_scores(self,fsm_1, fsm_2, k, matching_pairs):
         ''' Compute the scores for the different possible pairs '''
-        out_match_trans = self.matching_transitions(fsm_1,fsm_2,True)
+        out_match_trans = self.matching_transitions(fsm_1,fsm_2,True, matching_pairs)
         outcome_out = self.linear_equation_solver(out_match_trans, k, True)
 
-        in_match_trans = self.matching_transitions(fsm_1,fsm_2,False)
+        in_match_trans = self.matching_transitions(fsm_1,fsm_2,False, matching_pairs)
         outcome_in = self.linear_equation_solver(in_match_trans, k, False)
 
         result_dict = {}
         for var in outcome_out.keys():
             result_dict[var] = (outcome_out[var] + outcome_in[var]) / 2
+        if equation:
+            print(result_dict)
         return result_dict
 
-    def identify_landmarks(self, pairs_to_scores,t,r, matching_pair = None):
+    def identify_landmarks(self, pairs_to_scores,t,r, matching_pairs = None):
         '''
         Identify which state pairs can be a possible match
 
         parameters
         ----------
         pairs_to_scores: dict
-            A dictonairy with the state paris as key and score as output
+            A dictionary with the state pairs as key and score as output
         t: float
             treshold value of the FSM_Diff algorithm
         r: float
@@ -188,8 +196,9 @@ class FSMDiff(metaclass=Singleton):
             if pairs_to_scores[var] >= t:
                 filtered_dict[var] = pairs_to_scores[var]
         landmarks = set()
-        if matching_pair is not None:
-            landmarks.add(matching_pair)
+        if matching_pairs is not None:
+            for matching_pair in matching_pairs:
+                landmarks.add(matching_pair)
         for var in vars:
             filtered_vars = list(filter(lambda v: v[0] ==var[0] and not v == var, vars))
             is_landmark = True
@@ -390,7 +399,7 @@ class FSMDiff(metaclass=Singleton):
         log_dict["Incoming time"] = "%s" % self.in_time
         log_dict["Solver"] = current_solver
 
-    def algorithm(self, fsm_1, fsm_2, k, t, r, matching_pair = None):
+    def algorithm(self, fsm_1, fsm_2, k, t, r, matching_pairs = None):
         '''
         Executes the FSM_Diff algorithm
 
@@ -413,16 +422,17 @@ class FSMDiff(metaclass=Singleton):
         -------
         nx.MultiDiGraph with added/removed transitions annotated in the graph
         '''
-        if matching_pair is not None:
-            if (matching_pair[0] not in fsm_1.nodes or matching_pair[1] not in fsm_2.nodes):
-                print("Given pairs do not exists in the FSM's")
-                return nx.MultiDiGraph()
+        if matching_pairs is not None:
+            for matching_pair in matching_pairs:
+                if (matching_pair[0] not in fsm_1.nodes or matching_pair[1] not in fsm_2.nodes):
+                    print("pair: " + matching_pair[0] +  " " +  matching_pair[1] + " does not exists")
+                    return nx.MultiDiGraph()
 
         # line 1
-        pairs_to_scores = self.compute_scores(fsm_1,fsm_2,k)
+        pairs_to_scores = self.compute_scores(fsm_1,fsm_2,k, matching_pairs)
 
         # line 2
-        k_pairs = self.identify_landmarks(pairs_to_scores,t,r,matching_pair)
+        k_pairs = self.identify_landmarks(pairs_to_scores,t,r,matching_pairs)
         # line 3-5
         key = (list(fsm_1.nodes)[0], list(fsm_2.nodes)[0])
         if not k_pairs and pairs_to_scores[key] >= 0:
