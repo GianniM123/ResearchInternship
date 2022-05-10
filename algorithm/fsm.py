@@ -4,6 +4,7 @@ import string
 from typing import List, Tuple, Dict
 from time import time
 import warnings
+from numpy import mat
 
 from pysmt.shortcuts import Symbol, And, GE, Plus, Minus, Times, Equals, Real, get_model
 from pysmt.typing import REAL
@@ -98,9 +99,10 @@ class FSMDiff(metaclass=Singleton):
         for s1 in fsm_1.nodes:
             for s2 in fsm_2.nodes:
                 is_a_match = False
-                for pair in matching_pairs:
-                    if s1 == pair[0] or s2 == pair[1]:
-                        is_a_match = True
+                if matching_pairs is not None:
+                    for pair in matching_pairs:
+                        if s1 == pair[0] or s2 == pair[1]:
+                            is_a_match = True
                 if not is_a_match:
                     outcome.append(self.pair_matching_transition(fsm_1,fsm_2,s1,s2,out))
         return outcome
