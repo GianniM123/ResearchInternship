@@ -1,6 +1,7 @@
 '''Main module'''
 import getopt
 import sys
+import warnings
 
 import networkx as nx
 
@@ -22,7 +23,7 @@ def main():
     updated_filename = None
     output_file = "out.dot"
     try:
-        arguments = getopt.getopt(sys.argv[1:],"idelphs:k:t:r:m:o:",["time","debug","equation","log","performance","help","smt","k_value","threshold","ratio","matching-file","ref=", "upd=", "out="])
+        arguments = getopt.getopt(sys.argv[1:],"idelphs:k:t:r:m:o:",["time","debug","equation","log","performance","help","k-pairs","smt","k_value","threshold","ratio","matching-file","ref=", "upd=", "out="])
 
         for current_arg, current_val in arguments[0]:
             if current_arg in ("-s", "--smt"):
@@ -45,6 +46,8 @@ def main():
                 threshold = float(current_val)
             elif current_arg in ("-r", "--ratio"):
                 ratio = float(current_val)
+            elif current_arg in ("--k-pairs"):
+                fsm.k_pairs_output = True
             elif current_arg in ("-e", "--equation"):
                 fsm.equation = True
             elif current_arg in ("-m","--matching-file"):
@@ -53,7 +56,10 @@ def main():
                 reference_model = nx.drawing.nx_agraph.read_dot(current_val)
                 reference_filename = current_val
             elif current_arg in ("-o", "--out"):
-                output_file = current_val
+                if current_val.split(".")[-1] == "dot":
+                    output_file = current_val
+                else:
+                    warnings.warn("output file needs to end on .dot, default out.dot is used instead")
             elif current_arg in ("--upd"):
                 updated_model = nx.drawing.nx_agraph.read_dot(current_val)
                 updated_filename = current_val
@@ -70,6 +76,8 @@ def main():
         print("Model not set")
         return
 
+    fsm.output_file = output_file.split(".dot")[0] + ".txt"
+    
     matching_pairs = None
     if matching_file is not None:
         matching_pairs = read_pairs(matching_file)
