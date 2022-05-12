@@ -4,13 +4,12 @@ import string
 from typing import List, Tuple, Dict
 from time import time
 import warnings
-from numpy import mat
 
 from pysmt.shortcuts import Symbol, And, GE, Plus, Minus, Times, Equals, Real, get_model
 from pysmt.typing import REAL
 import networkx as nx
 
-from debug import print_smtlib
+from debug import print_smtlib, write_k_pairs_to_file
 
 SMT_SOLVERS = ["msat","cvc4","z3","yices"]
 
@@ -20,6 +19,8 @@ timing = False
 performance = False
 logging = False
 equation = False
+output_file = "out.txt"
+k_pairs_output = False
 
 @dataclass
 class ComparingStates:
@@ -460,6 +461,9 @@ class FSMDiff(metaclass=Singleton):
                 n_pairs = n_pairs.union(self.surrounding_pairs(fsm_1,fsm_2,pair))
             for k_p in k_pairs:
                 n_pairs = self.remove_conflicts(n_pairs,k_p)
+
+        if k_pairs_output:
+            write_k_pairs_to_file(k_pairs, output_file)
 
         added = self.added_transitions(fsm_1,fsm_2,k_pairs)
         removed = self.removed_transitions(fsm_1,fsm_2,k_pairs)
