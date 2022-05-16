@@ -2,12 +2,10 @@
 
 MAX_PROCS=1
 subjects_dir=../subjects/tcp/
-out_dir=../results/tcp_rerun
+out_dir=../results/tcp_preset_100
 end=5
 
 
-declare -a sat_solvers=("msat" "cvc4" "z3" "yices")
-# "btor" "picosat" "bdd" do not suppport logic
 mkdir -p $out_dir
 
 files=$(md5sum `find ../subjects/tcp/ -name "*_Server.dot"` | sort | uniq -w 33 | cut -c35-)
@@ -23,7 +21,8 @@ do
             f1=${f1///}
             f2=${f2///}
             name="${out_dir}/${f1%.*}-${f2%.*}-${i}.dot"
-            echo python3 ../algorithm/main.py --ref=$file1 --upd=$file2 -o $name -t 0.4 -s "yices" -l 
+            match_file="../tcp_k_pairs/${f1%.*}-${f2%.*}.txt"
+            echo python3 ../algorithm/main.py --ref=$file1 --upd=$file2 -o $name -t 0.4 -s "yices" -l -m $match_file
 
 
         done
