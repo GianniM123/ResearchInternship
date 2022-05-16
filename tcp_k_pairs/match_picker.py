@@ -22,7 +22,7 @@ def write_pairs_to_file(pairs, file):
 if __name__ == "__main__":
     for file in listdir("."):
         split = file.split(".")
-        if split[1] == ".txt":
+        if split[1] == "txt":
             pairs = read_pairs(file)
             nr_picks = math.floor(len(pairs)/2)
             picks = random.sample(pairs,nr_picks)
