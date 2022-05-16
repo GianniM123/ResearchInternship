@@ -2,8 +2,8 @@
 
 MAX_PROCS=1
 subjects_dir=../subjects/tcp/
-out_dir=../results/tcp
-end=30
+out_dir=../results/tcp_k_pairs
+end=1
 
 
 declare -a sat_solvers=("msat" "cvc4" "z3" "yices")
@@ -22,7 +22,7 @@ do
             f2=${file2#${subjects_dir}}
             f1=${f1///}
             f2=${f2///}
-            name="${out_dir}/${f1%.*}-${f2%.*}-${solver}-${i}.dot"
+            name="${out_dir}/${f1%.*}-${f2%.*}-${i}.dot"
             echo python3 ../algorithm/main.py --ref=$file1 --upd=$file2 -o $name -t 0.4 -s "yices" -l --k-pairs
 
 
