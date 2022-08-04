@@ -64,7 +64,7 @@ def main():
                 updated_model = nx.drawing.nx_agraph.read_dot(current_val)
                 updated_filename = current_val
             elif current_arg in ("-h", "--help"):
-                print("Usage: main.py --ref=<reference dot model> --upd=<updated dot model> [-l (add logging in out file) -d (print smt) -e (print linear equation output) -i (print time smt takes) -p (performance matrix) -o <output file> -s <smt-solver> -k <k value> -t <threshold value> -r <ratio value> -a <matching s1> -b <matching s2>]")
+                print("Usage: main.py --ref=<reference dot model> --upd=<updated dot model> [-l (add logging in out file) -d (print smt) -e (print linear equation output) -i (print time smt takes) -p (performance matrix) -o <output file> -s <smt-solver> -k <k value> -t <threshold value> -r <ratio value> -m <matching file>]")
                 print("<smt-solver> options:")
                 for solver in SMT_SOLVERS:
                     print('\t' + solver)
