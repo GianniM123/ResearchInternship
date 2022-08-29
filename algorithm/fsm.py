@@ -135,7 +135,7 @@ class FSMDiff(metaclass=Singleton):
         names = []
         variables = []
         domain = []
-        equations = [Equals(Symbol("k", REAL), Real(k)), Equals(Symbol("k-null", REAL), Real(0))]
+        equations = []
         for state_pair in state_pairs:
             names.append(state_pair.states)
             variable = Symbol("(" + state_pair.states[0] + "," + state_pair.states[1] + ")", REAL)
@@ -143,7 +143,7 @@ class FSMDiff(metaclass=Singleton):
             domain.append(GE(variable,Real(0.0)))
             denominator = 2 * (len(state_pair.matching_trans) + len(state_pair.non_matching_trans[0]) + len(state_pair.non_matching_trans[1]))
             matched_states = [((t1[1] if out else t1[0]),(t2[1] if out else t2[0])) for t1, t2 in state_pair.matching_trans]
-            reached_states_vars = [ Times(Symbol("k", REAL) if self.is_a_match(matching_pairs, t1, t2) else Symbol("k-null", REAL),Symbol("(" + t1 + "," + t2  + ")", REAL)) for (t1,t2) in matched_states]
+            reached_states_vars = [ Times(Real(k) if self.is_a_match(matching_pairs, t1, t2) else Real(0),Symbol("(" + t1 + "," + t2  + ")", REAL)) for (t1,t2) in matched_states]
             times = Real(0) if len(reached_states_vars) < 1 else Plus(list(i for i in reached_states_vars))
             equation = Equals(Minus(Times(Real(denominator), variable),  times), Real(len(state_pair.matching_trans)))
             equations.append(equation)
