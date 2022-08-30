@@ -5,7 +5,7 @@ from typing import List, Tuple, Dict
 from time import time
 import warnings
 
-from pysmt.shortcuts import Symbol, And, GE, Plus, Minus, Times, Equals, Real, get_model
+from pysmt.shortcuts import Symbol, And, Equals, GE, Plus, Minus, Times, Equals, Real, get_model
 from pysmt.typing import REAL
 import networkx as nx
 
@@ -92,23 +92,29 @@ class FSMDiff(metaclass=Singleton):
 
         return state_compare
 
-    def matching_transitions(self,fsm_1,fsm_2,out, matching_pairs):
+    def matching_transitions(self,fsm_1,fsm_2,out):
         '''
         Run pair_matching_transition with all different pairs possible
         '''
         outcome = []
         for s1 in fsm_1.nodes:
             for s2 in fsm_2.nodes:
-                is_a_match = False
-                if matching_pairs is not None:
-                    for pair in matching_pairs:
-                        if s1 == pair[0] or s2 == pair[1]:
-                            is_a_match = True
-                if not is_a_match:
-                    outcome.append(self.pair_matching_transition(fsm_1,fsm_2,s1,s2,out))
+                outcome.append(self.pair_matching_transition(fsm_1,fsm_2,s1,s2,out))
         return outcome
 
-    def linear_equation_solver(self, state_pairs, k, out):
+    def is_a_match(self, matching_pairs, t1, t2):
+        if matching_pairs == None:
+            return True # need to pick K
+        else:
+            if (t1,t2) in matching_pairs:
+                return True
+            for (m1,m2) in matching_pairs:
+                if t1 == m1 or t2 == m2:
+                    return False
+        return True # If the states are not listed in matching_pairs we pick normal K
+
+
+    def linear_equation_solver(self, state_pairs, k, out, matching_pairs = None):
         '''
         Solve the linear equation for the FSM_Diff algorithm
 
@@ -130,16 +136,16 @@ class FSMDiff(metaclass=Singleton):
         variables = []
         domain = []
         equations = []
-
         for state_pair in state_pairs:
             names.append(state_pair.states)
             variable = Symbol("(" + state_pair.states[0] + "," + state_pair.states[1] + ")", REAL)
             variables.append(variable)
             domain.append(GE(variable,Real(0.0)))
             denominator = 2 * (len(state_pair.matching_trans) + len(state_pair.non_matching_trans[0]) + len(state_pair.non_matching_trans[1]))
-            reached_states_vars = [Symbol("(" + (t1[1] if out else t1[0]) + "," + (t2[1] if out else t2[0])  + ")", REAL) for t1, t2 in state_pair.matching_trans]
+            matched_states = [((t1[1] if out else t1[0]),(t2[1] if out else t2[0])) for t1, t2 in state_pair.matching_trans]
+            reached_states_vars = [ Times(Real(k) if self.is_a_match(matching_pairs, t1, t2) else Real(0),Symbol("(" + t1 + "," + t2  + ")", REAL)) for (t1,t2) in matched_states]
             times = Real(0) if len(reached_states_vars) < 1 else Plus(list(i for i in reached_states_vars))
-            equation = Equals(Minus(Times(Real(denominator), variable), Times(Real(k), times)), Real(len(state_pair.matching_trans)))
+            equation = Equals(Minus(Times(Real(denominator), variable),  times), Real(len(state_pair.matching_trans)))
             equations.append(equation)
         formula = And(And( (i for i in domain)), And( (i for i in equations)))
         if debug:
@@ -154,17 +160,17 @@ class FSMDiff(metaclass=Singleton):
             print("%s seconds SMT execution for " % self.out_time if out else self.in_time, end="")
             print("outgoing transitions" if out else "incoming transitions")
         return_dict = {}
-        for i in range(0,len(variables)):
+        for i in range(0,len(names)):
             return_dict[names[i]] = eval(str(model.get_value(variables[i])))
         return return_dict
 
     def compute_scores(self,fsm_1, fsm_2, k, matching_pairs):
         ''' Compute the scores for the different possible pairs '''
-        out_match_trans = self.matching_transitions(fsm_1,fsm_2,True, matching_pairs)
-        outcome_out = self.linear_equation_solver(out_match_trans, k, True)
+        out_match_trans = self.matching_transitions(fsm_1,fsm_2,True)
+        outcome_out = self.linear_equation_solver(out_match_trans, k, True, matching_pairs)
 
-        in_match_trans = self.matching_transitions(fsm_1,fsm_2,False, matching_pairs)
-        outcome_in = self.linear_equation_solver(in_match_trans, k, False)
+        in_match_trans = self.matching_transitions(fsm_1,fsm_2,False)
+        outcome_in = self.linear_equation_solver(in_match_trans, k, False, matching_pairs)
 
         result_dict = {}
         for var in outcome_out.keys():
@@ -173,7 +179,7 @@ class FSMDiff(metaclass=Singleton):
             print(result_dict)
         return result_dict
 
-    def identify_landmarks(self, pairs_to_scores,t,r, matching_pairs = None):
+    def identify_landmarks(self, pairs_to_scores,t,r):
         '''
         Identify which state pairs can be a possible match
 
@@ -199,9 +205,6 @@ class FSMDiff(metaclass=Singleton):
             if pairs_to_scores[var] >= t:
                 filtered_dict[var] = pairs_to_scores[var]
         landmarks = set()
-        if matching_pairs is not None:
-            for matching_pair in matching_pairs:
-                landmarks.add(matching_pair)
         for var in vars:
             filtered_vars = list(filter(lambda v: v[0] ==var[0] and not v == var, vars))
             is_landmark = True
@@ -210,6 +213,7 @@ class FSMDiff(metaclass=Singleton):
                     is_landmark = False
             if is_landmark:
                 landmarks.add(var)
+        print(landmarks)
         return landmarks
 
 
@@ -435,7 +439,7 @@ class FSMDiff(metaclass=Singleton):
         pairs_to_scores = self.compute_scores(fsm_1,fsm_2,k, matching_pairs)
 
         # line 2
-        k_pairs = self.identify_landmarks(pairs_to_scores,t,r,matching_pairs)
+        k_pairs = self.identify_landmarks(pairs_to_scores,t,r)
         # line 3-5
         key = (list(fsm_1.nodes)[0], list(fsm_2.nodes)[0])
         if not k_pairs and pairs_to_scores[key] >= 0:
