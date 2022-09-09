@@ -10,7 +10,7 @@ def extract_info_from_model(file):
     model = nx.drawing.nx_agraph.read_dot(file)
     return_dict = {}
     splitted = file.split("-")
-    v3 = splitted[3].split(".")[0]
+    v3 = splitted[2].split(".")[0]
     return_dict["reference version"] = splitted[0].split("/")[3]
     return_dict["updated version"] = splitted[1]
     return_dict["SMT solver"] =  model.graph["Solver"]

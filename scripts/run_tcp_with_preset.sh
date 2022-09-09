@@ -1,8 +1,8 @@
 #!/bin/bash
 
-MAX_PROCS=1
+MAX_PROCS=2
 subjects_dir=../subjects/tcp/
-out_dir=../results/tcp_preset_50
+out_dir=../results/tcp_preset_50_rerun
 end=5
 
 
