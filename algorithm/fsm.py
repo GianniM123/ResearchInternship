@@ -1,19 +1,22 @@
 '''FSM module containing the FSM_diff algorithm'''
 from dataclasses import dataclass
 import string
-from typing import List, Tuple, Dict
+from typing import List, Tuple, Dict, final
 from time import time
 import warnings
 
 from pysmt.shortcuts import Symbol, And, Equals, GE, Plus, Minus, Times, Equals, Real, get_model
 from pysmt.typing import REAL
 import networkx as nx
+from scikits.umfpack import spsolve
+import numpy as np
+from scipy.sparse import csc_matrix
 
 from debug import print_smtlib, write_k_pairs_to_file
 
 SMT_SOLVERS = ["msat","cvc4","z3","yices"]
 
-current_solver = "z3"
+current_solver = "umfpack"
 debug = False
 timing = False
 performance = False
@@ -113,10 +116,80 @@ class FSMDiff(metaclass=Singleton):
                     return False
         return True # If the states are not listed in matching_pairs we pick normal K
 
-
     def linear_equation_solver(self, state_pairs, k, out, matching_pairs = None):
         '''
         Solve the linear equation for the FSM_Diff algorithm
+
+        Parameters
+        ----------
+        state_pairs: list(ComparingStates)
+            All matched and unmatched transitions for all the possible pairs
+        k: float
+            k-value of the FSM_Diff algorithm
+        out: bool
+            True if it must match on outgoing transitions,
+            False if must match on incoming transitions
+
+        Returns
+        -------
+        Dictionary with the pairs as key and value as output
+        '''
+        results = []
+        equations = []
+
+        columns = []
+        rows = []
+
+        state_pair_map = {}
+        for i in range(0,len(state_pairs)):
+            state_pair_map[state_pairs[i].states] = i
+        
+        row = 0
+        for state_pair in state_pairs:
+            denominator = 2 * (len(state_pair.matching_trans) + len(state_pair.non_matching_trans[0]) + len(state_pair.non_matching_trans[1]))
+            matched_states = [((t1[1] if out else t1[0]),(t2[1] if out else t2[0])) for t1, t2 in state_pair.matching_trans]
+
+            equation = [0] * len(state_pairs)
+            equation[state_pair_map[state_pair.states]] = denominator
+            for matched_state in matched_states:
+                if (self.is_a_match(matching_pairs,matched_state[0],matched_state[1])):
+                    equation[state_pair_map[matched_state]] = equation[state_pair_map[matched_state]] -1 * k
+
+            columns = columns + list(range(0,len(state_pairs)))
+            rows = rows + ([row] * len(state_pairs))
+
+            row = row + 1
+
+            equations = equations + equation
+            results.append(len(matched_states))
+            if debug:
+                print(equation, " ",  len(matched_states))
+
+        matrix = csc_matrix((np.array(equations),(np.array(rows),np.array(columns))))
+
+        start_time = time()
+        final_result = spsolve(matrix,np.array(results))
+        if out:
+            self.out_time = (time() - start_time)
+        else:
+            self.in_time = (time() - start_time)
+        if timing:
+            print("%s seconds umfpack execution for " % self.out_time if out else self.in_time, end="")
+            print("outgoing transitions" if out else "incoming transitions")
+        
+        return_dict = {}
+        for i in range(0,len(final_result)):
+            return_dict[state_pairs[i].states] = final_result[i]
+        
+        return return_dict
+        
+
+        
+
+
+    def linear_equation_solver_smt(self, state_pairs, k, out, matching_pairs = None):
+        '''
+        Solve the linear equation with SMT-solvers for the FSM_Diff algorithm
 
         Parameters
         ----------
@@ -166,11 +239,14 @@ class FSMDiff(metaclass=Singleton):
 
     def compute_scores(self,fsm_1, fsm_2, k, matching_pairs):
         ''' Compute the scores for the different possible pairs '''
+
+        solver_function = self.linear_equation_solver if current_solver == "umfpack" else self.linear_equation_solver_smt
+
         out_match_trans = self.matching_transitions(fsm_1,fsm_2,True)
-        outcome_out = self.linear_equation_solver(out_match_trans, k, True, matching_pairs)
+        outcome_out = solver_function(out_match_trans, k, True, matching_pairs)
 
         in_match_trans = self.matching_transitions(fsm_1,fsm_2,False)
-        outcome_in = self.linear_equation_solver(in_match_trans, k, False, matching_pairs)
+        outcome_in = solver_function(in_match_trans, k, False, matching_pairs)
 
         result_dict = {}
         for var in outcome_out.keys():
@@ -213,7 +289,6 @@ class FSMDiff(metaclass=Singleton):
                     is_landmark = False
             if is_landmark:
                 landmarks.add(var)
-        print(landmarks)
         return landmarks
 
 
