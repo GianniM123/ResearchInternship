@@ -1,7 +1,7 @@
-# Research Internship
+# A Python Implementation of the LTS_Diff algorithm for state-based model comparison
 
 ## Folder structure
-- `algorithm` contains the Fsm_Diff/ Lts_Diff algorithm
+- `algorithm` contains the LTS_Diff algorithm
 - `dot-files` contains some example dot-files which can be used in the algorithm
 
 ## Dependencies
