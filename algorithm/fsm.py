@@ -8,7 +8,7 @@ import warnings
 from pysmt.shortcuts import Symbol, And, Equals, GE, Plus, Minus, Times, Equals, Real, get_model
 from pysmt.typing import REAL
 import networkx as nx
-from scikits.umfpack import spsolve
+from scipy.sparse.linalg import spsolve
 import numpy as np
 from scipy.sparse import csc_matrix
 
