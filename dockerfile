@@ -7,7 +7,7 @@ RUN apt-get update && \
     swig libgmp-dev autoconf libtool antlr3 wget curl gperf
 
 RUN /usr/bin/python3 -m pip install --upgrade pip && \
-    pip install pygraphviz
+    pip install pygraphviz && pip install scikit-umfpack && pip install pydot
 
 
 
