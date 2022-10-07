@@ -13,7 +13,7 @@ mkdir -p $out_dir
 
 files=$(md5sum `find ../subjects/ssh/ -name "*.dot"` | sort | uniq -w 33 | cut -c35-)
 
-for i in $(seq 1 $end)
+for i in $(seq 1 $END)
 do
     for file1 in $files
     do
