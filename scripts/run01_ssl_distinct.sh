@@ -26,14 +26,14 @@ do
                 f1=${f1///}
                 f2=${f2///}
                 name="${out_dir}/${f1%lea*}-${f2%lea*}-${solver}-${i}.dot"
-                python3 ../algorithm/main.py --ref=$file1 --upd=$file2 -o $name -t 0.5 -s $solver -l
+                echo python3 ../algorithm/main.py --ref=$file1 --upd=$file2 -o $name -t 0.5 -s $solver -l
 
-                echo ${name} 
+                #echo ${name}
             done
             name="${out_dir}/${f1%lea*}-${f2%lea*}-umfpack-${i}.dot"
-            python3 ../algorithm/main.py --ref=$file1 --upd=$file2 -o $name -t 0.5 -l
+            echo python3 ../algorithm/main.py --ref=$file1 --upd=$file2 -o $name -t 0.5 -l
         done
-    done
+    done | xargs -I CMD --max-procs=$MAX_PROCS timeout $TIMEOUT bash -c "CMD"
 done
 
 python3 ./add_date.py "${out_dir}/"
